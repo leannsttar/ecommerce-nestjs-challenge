@@ -4,11 +4,10 @@ import { SignUpDto } from './dto/signup.dto';
 import { SignInDto } from './dto/signin.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
-import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { Public } from './decorators/public.decorator';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import type { Response, Request } from 'express';
+import { Throttle } from '@nestjs/throttler';
 
 @Controller('auth')
 export class AuthController {
@@ -50,6 +49,7 @@ export class AuthController {
     return { message: 'Signed out successfully' };
   }
 
+  @Throttle({ default: { limit: 3, ttl: 900000 } })
   @Public()
   @Post('forgot-password')
   async forgotPassword(@Body() dto: ForgotPasswordDto): Promise<{ message: string }> {
@@ -57,6 +57,7 @@ export class AuthController {
     return { message: 'If the email exists, a reset link has been sent' };
   }
 
+  @Throttle({ default: { limit: 3, ttl: 900000 } })
   @Public()
   @Post('reset-password')
   async resetPassword(@Body() dto: ResetPasswordDto): Promise<{ message: string }> {

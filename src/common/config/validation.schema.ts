@@ -17,4 +17,14 @@ export const validationSchema = Joi.object({
 
   // reset password token config
   RESET_PASSWORD_TOKEN_EXPIRATION: Joi.string().default('30m'),
+
+  //rate limit
+  THROTTLE_SHORT_TTL: Joi.number().default(1000),
+  THROTTLE_SHORT_LIMIT: Joi.number().default(3),
+  
+  THROTTLE_MEDIUM_TTL: Joi.number().default(10000),
+  THROTTLE_MEDIUM_LIMIT: Joi.number().default(20),
+  
+  THROTTLE_LONG_TTL: Joi.number().default(60000),
+  THROTTLE_LONG_LIMIT: Joi.number().default(100),
 });
