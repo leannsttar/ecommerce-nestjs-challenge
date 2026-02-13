@@ -5,6 +5,8 @@ import { ConfigModule } from '@nestjs/config';
 import { jwtConfig } from './common/config/jwt.config';
 import { appConfig } from './common/config/app.config';
 import { validationSchema } from './common/config/validation.schema';
+import { PrismaModule } from './prisma/prisma.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -17,7 +19,9 @@ import { validationSchema } from './common/config/validation.schema';
         abortEarly: true,
         allowUnknown: true,
       },
-    })
+    }),
+    PrismaModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

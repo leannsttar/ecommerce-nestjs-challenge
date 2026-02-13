@@ -16,5 +16,5 @@ export const validationSchema = Joi.object({
   REFRESH_TOKEN_EXPIRATION: Joi.string().default('7d'),
 
   // reset password token config
-  RESET_PASSWORD_TOKEN_EXPIRATION: Joi.number().default(3600000), // 1 h
+  RESET_PASSWORD_TOKEN_EXPIRATION: Joi.string().default('30m'),
 });
