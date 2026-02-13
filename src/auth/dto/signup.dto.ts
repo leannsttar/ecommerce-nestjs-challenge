@@ -35,7 +35,7 @@ export class SignUpDto {
   @Transform(({ value }) => value?.trim())
   fullName: string;
 
-  @IsEnum(UserRole)
-  @IsOptional()
-  role?: UserRole;
+  // @IsEnum(UserRole)
+  // @IsOptional()
+  // role?: UserRole;
 }

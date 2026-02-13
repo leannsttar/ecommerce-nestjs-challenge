@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Res, Req } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { SignUpDto } from './dto/signup.dto';
 import { SignInDto } from './dto/signin.dto';
@@ -6,41 +6,70 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
-
+import { Public } from './decorators/public.decorator';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import type { Response, Request } from 'express';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Public()
   @Post('signup')
-  async signUp(@Body() dto: SignUpDto): Promise<AuthResponseDto> {
-    return this.authService.signUp(dto);
+  async signUp(@Body() dto: SignUpDto, @Res({passthrough: true}) res: Response): Promise<AuthResponseDto> {
+    const result = await this.authService.signUp(dto);
+    this.setCookie(res, result.refreshToken, result.refreshTokenExpirationMs);
+    return { accessToken: result.accessToken, expiresIn: result.expiresIn };
   }
 
+  @Public()
   @Post('signin')
-  async signIn(@Body() dto: SignInDto): Promise<AuthResponseDto> {
-    return this.authService.signIn(dto);
+  async signIn(@Body() dto: SignInDto, @Res({passthrough: true}) res: Response): Promise<AuthResponseDto> {
+    const result = await this.authService.signIn(dto);
+    this.setCookie(res, result.refreshToken, result.refreshTokenExpirationMs);
+    return { accessToken: result.accessToken, expiresIn: result.expiresIn };
   }
+
+  @Public()
   @Post('refresh')
-  async refresh(@Body() dto: RefreshTokenDto): Promise<{ accessToken: string; expiresIn: number }> {
-    return this.authService.refresh(dto.refreshToken);
+  async refresh(@Req() req: Request): Promise<{ accessToken: string; expiresIn: number }> {
+    const refreshToken = req.cookies['refreshToken'];
+    return this.authService.refresh(refreshToken);
   }
 
   @Post('signout')
-  async signOut(@Body() dto: RefreshTokenDto): Promise<{ message: string }> {
-    await this.authService.signOut(dto.refreshToken);
+  // @UseGuards(JwtAuthGuard)
+  async signOut(@Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<{ message: string }> {
+    const refreshToken = req.cookies['refreshToken'];
+    await this.authService.signOut(refreshToken);
+    res.clearCookie('refreshToken', {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
+    });
     return { message: 'Signed out successfully' };
   }
 
+  @Public()
   @Post('forgot-password')
   async forgotPassword(@Body() dto: ForgotPasswordDto): Promise<{ message: string }> {
     await this.authService.forgotPassword(dto.email);
     return { message: 'If the email exists, a reset link has been sent' };
   }
 
+  @Public()
   @Post('reset-password')
   async resetPassword(@Body() dto: ResetPasswordDto): Promise<{ message: string }> {
     await this.authService.resetPassword(dto.token, dto.newPassword);
     return { message: 'Password reset successfully' };
+  }
+
+  private setCookie(res: Response, token: string, maxAge: number) {
+    res.cookie('refreshToken', token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'strict',
+      maxAge: maxAge,
+    });
   }
 }
