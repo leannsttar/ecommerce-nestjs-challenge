@@ -19,10 +19,9 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     });
   }
 
-  async validate(payload: JwtPayload): Promise<Omit<User, 'passwordHash' | 'resetPasswordTokenHash' | 'resetPasswordExpires' | 'stripeCustomerId'>> {
+  async validate(payload: JwtPayload): Promise<Pick<User, 'id' | 'role' | 'email' | 'fullName'>> {
     const user = await this.usersService.findById(payload.sub);
 
-    // verify user is not soft-deleted
     if (user.deletedAt) {
       throw new UnauthorizedException('User account is inactive');
     }
@@ -31,10 +30,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       id: user.id,
       role: user.role,
       email: user.email,
-      fullName: user.fullName,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-      deletedAt: user.deletedAt,
+      fullName: user.fullName
     };
   }
 }

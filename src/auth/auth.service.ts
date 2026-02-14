@@ -1,17 +1,17 @@
 import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { UsersService } from '../users/users.service';
-import { PasswordService } from './password.service';
-import { ResetTokenService } from './reset-token.service';
-import { RefreshTokenService } from './refresh-token.service';
+import { PasswordService } from './services/password.service';
+import { ResetTokenService } from './services/reset-token.service';
+import { RefreshTokenService } from './services/refresh-token.service';
+import { AccessTokenService } from './services/access-token.service';
 import { SignUpDto } from './dto/signup.dto';
 import { SignInDto } from './dto/signin.dto';
-import { JwtPayload } from '../common/interfaces/jwt-payload.interface';
 import { UserRole } from 'generated/prisma/client';
 import { AuthResult } from './types/auth-result.type';
+import { EmailService } from '../notifications/services/email.service';
 
-import { parseDuration } from '../utils/parse-duration';
+import { parseDurationToMs } from '../utils/parse-duration';
 
 @Injectable()
 export class AuthService {
@@ -20,8 +20,9 @@ export class AuthService {
     private readonly passwordService: PasswordService,
     private readonly resetTokenService: ResetTokenService,
     private readonly refreshTokenService: RefreshTokenService,
-    private readonly jwtService: JwtService,
+    private readonly accessTokenService: AccessTokenService,
     private readonly config: ConfigService,
+    private readonly emailService: EmailService,
   ) {}
 
   async signUp(dto: SignUpDto): Promise<AuthResult> {
@@ -34,11 +35,11 @@ export class AuthService {
       // role: dto.role,
     });
 
-    return this.generateAuthResult(user.id, user.email, user.role);
+    return this.buildAuthResponse(user.id, user.email, user.role);
   }
 
   async signIn(dto: SignInDto): Promise<AuthResult> {
-    const user = await this.usersService.findByEmailOrNull(dto.email);
+    const user = await this.usersService.findByEmail(dto.email);
 
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
@@ -53,36 +54,37 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    return this.generateAuthResult(user.id, user.email, user.role);
+    return this.buildAuthResponse(user.id, user.email, user.role);
   }
 
   async refresh(
     refreshToken: string,
-  ): Promise<{ accessToken: string; expiresIn: number }> {
+  ): Promise<AuthResult> {
 
     const storedToken = await this.refreshTokenService.validateRefreshToken(refreshToken);
     const user = await this.usersService.findById(storedToken.userId);
 
-    return this.generateAccessToken(user.id, user.email, user.role);
+    await this.refreshTokenService.revokeRefreshTokenById(storedToken.id);
+
+    return this.buildAuthResponse(user.id, user.email, user.role);
   }
 
   async signOut(refreshToken: string): Promise<void> {
-    await this.refreshTokenService.revokeRefreshToken(refreshToken);
+    const storedToken = await this.refreshTokenService.validateRefreshToken(refreshToken);
+    await this.refreshTokenService.revokeRefreshTokenById(storedToken.id);
   }
 
   async forgotPassword(email: string): Promise<void> {
-    const user = await this.usersService.findByEmailOrNull(email);
+    const user = await this.usersService.findByEmail(email);
 
     if (!user) {
-      // Do not reveal that the user does not exist
+      // dont reveal that the user does not exist
       return;
     }
 
-    const resetToken = this.resetTokenService.generateResetToken();
-    const tokenHash = this.resetTokenService.hashResetToken(resetToken);
-    const expiresAt = this.resetTokenService.calculateExpirationDate();
+    const { resetToken, resetTokenHash, expiresAt } = this.resetTokenService.createResetTokenData();
 
-    await this.usersService.saveResetToken(user.id, tokenHash, expiresAt);
+    await this.usersService.saveResetToken(user.id, resetTokenHash, expiresAt);
 
     // MOCKED EMAIL: print token in console for testing
     console.log('='.repeat(80));
@@ -91,6 +93,12 @@ export class AuthService {
     console.log(`   Token: ${resetToken}`);
     console.log(`   Expires: ${expiresAt.toISOString()}`);
     console.log('='.repeat(80));
+
+    try {
+      await this.emailService.sendResetPasswordEmail(user.email, resetToken, expiresAt, new Date());
+    } catch (error) {
+      console.error('Email sending failed:', error);
+    }
   }
 
   async resetPassword(token: string, newPassword: string): Promise<void> {
@@ -106,40 +114,27 @@ export class AuthService {
 
     // revoke all user refresh tokens for security
     await this.refreshTokenService.revokeAllUserTokens(user.id);
+
+    try {
+      await this.emailService.sendChangedPasswordEmail(user.email, new Date());
+    } catch (error) {
+      console.error('Email sending failed:', error);
+    }
   }
 
-  private async generateAccessToken(
-    userId: string,
-    email: string,
-    role: UserRole,
-  ): Promise<{ accessToken: string; expiresIn: number }> {
-    const payload: JwtPayload = {
-      sub: userId,
-      email,
-      role,
-    };
-
-    const expirationConfig = this.config.get<string | number>('jwt.expiration', '15m');
-    const expirationMs = parseDuration(expirationConfig);
-    const expiresInSeconds = Math.floor(expirationMs / 1000);
-    const accessToken = this.jwtService.sign(payload, { expiresIn: expiresInSeconds });
-
-    return { accessToken, expiresIn: expiresInSeconds };
-  }
-
-  private async generateAuthResult(
+  private async buildAuthResponse(
     userId: string,
     email: string,
     role: UserRole,
   ): Promise<AuthResult> {
-    const { accessToken, expiresIn } = await this.generateAccessToken(
+    const { accessToken, expiresIn } = await this.accessTokenService.generateAccessToken(
       userId,
       email,
       role,
     );
     const { token: refreshToken } = await this.refreshTokenService.createRefreshToken(userId);
     const refreshTokenExpiration = this.config.getOrThrow<number>('app.refreshTokenExpiration');
-    const refreshTokenExpirationMs = parseDuration(refreshTokenExpiration);
+    const refreshTokenExpirationMs = parseDurationToMs(refreshTokenExpiration);
 
     return { accessToken, expiresIn, refreshToken, refreshTokenExpirationMs };
   }

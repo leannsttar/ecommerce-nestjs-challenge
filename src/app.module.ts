@@ -4,6 +4,7 @@ import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { jwtConfig } from './common/config/jwt.config';
 import { appConfig } from './common/config/app.config';
+import { rateLimitConfig } from './common/config/rate-limit.config';
 import { validationSchema } from './common/config/validation.schema';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
@@ -16,7 +17,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
     // global config with validation
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [jwtConfig, appConfig],
+      load: [jwtConfig, appConfig, rateLimitConfig],
       validationSchema,
       validationOptions: {
         abortEarly: true,

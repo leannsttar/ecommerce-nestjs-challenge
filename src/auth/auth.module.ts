@@ -4,11 +4,13 @@ import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
-import { PasswordService } from './password.service';
-import { ResetTokenService } from './reset-token.service';
-import { RefreshTokenService } from './refresh-token.service';
+import { PasswordService } from './services/password.service';
+import { ResetTokenService } from './services/reset-token.service';
+import { RefreshTokenService } from './services/refresh-token.service';
+import { AccessTokenService } from './services/access-token.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { UsersModule } from '../users/users.module';
+import { EmailService } from '../notifications/services/email.service';
 
 @Module({
   imports: [
@@ -20,7 +22,7 @@ import { UsersModule } from '../users/users.module';
       useFactory: (config: ConfigService) => ({
         secret: config.get<string>('jwt.secret')!,
         signOptions: {
-          expiresIn: config.get<string>('jwt.expiration', '15m') as any,
+          expiresIn: config.get<string>('jwt.expiration') as any,
         },
       }),
     }),
@@ -31,7 +33,9 @@ import { UsersModule } from '../users/users.module';
     PasswordService,
     ResetTokenService,
     RefreshTokenService,
+    AccessTokenService,
     JwtStrategy,
+    EmailService,
   ],
   exports: [AuthService],
 })

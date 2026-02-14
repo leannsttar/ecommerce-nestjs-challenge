@@ -22,16 +22,6 @@ export class UsersService {
     }
   }
 
-  async findByEmail(email: string): Promise<User> {
-    const user = await this.prisma.user.findUnique({
-      where: { email },
-    });
-    if (!user) {
-      throw new NotFoundException(`User with email ${email} not found`);
-    }
-    return user;
-  }
-
   async findById(id: string): Promise<User> {
     const user = await this.prisma.user.findUnique({
       where: { id },
@@ -42,7 +32,7 @@ export class UsersService {
     return user;
   }
 
-  async findByEmailOrNull(email: string): Promise<User | null> {
+  async findByEmail(email: string): Promise<User | null> {
     return this.prisma.user.findUnique({
       where: { email },
     });

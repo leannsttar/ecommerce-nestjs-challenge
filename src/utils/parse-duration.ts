@@ -1,4 +1,4 @@
-export function parseDuration(duration: string | number): number {
+export function parseDurationToMs(duration: string | number): number {
   if (typeof duration === 'number') {
     // already a number
     return duration;

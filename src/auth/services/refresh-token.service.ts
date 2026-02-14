@@ -1,10 +1,10 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from '../../prisma/prisma.service';
 import { RefreshToken } from 'generated/prisma/client';
 import * as crypto from 'crypto';
 
-import { parseDuration } from '../utils/parse-duration';
+import { parseDurationToMs } from '../../utils/parse-duration';
 
 @Injectable()
 export class RefreshTokenService {
@@ -19,9 +19,7 @@ export class RefreshTokenService {
     const token = crypto.randomBytes(32).toString('hex');
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
-    const expirationString = this.config.getOrThrow<string>(
-      'app.refreshTokenExpiration',
-    );
+    const expirationString = this.config.getOrThrow<string>('app.refreshTokenExpiration');
     const expiresAt = this.calculateExpiration(expirationString);
 
     await this.prisma.refreshToken.create({
@@ -57,11 +55,9 @@ export class RefreshTokenService {
     return refreshToken;
   }
 
-  async revokeRefreshToken(token: string): Promise<void> {
-    const refreshToken = await this.validateRefreshToken(token);
-
-    await this.prisma.refreshToken.update({
-      where: { id: refreshToken.id },
+  async revokeRefreshTokenById(tokenId: string): Promise<void> {
+    await this.prisma.refreshToken.update({ 
+      where: { id: tokenId },
       data: { revokedAt: new Date() },
     });
   }
@@ -77,7 +73,7 @@ export class RefreshTokenService {
   }
 
   private calculateExpiration(duration: string | number): Date {
-    const expirationMs = parseDuration(duration);
+    const expirationMs = parseDurationToMs(duration);
     return new Date(Date.now() + expirationMs);
   }
 }
