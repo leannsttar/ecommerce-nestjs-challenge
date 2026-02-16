@@ -11,6 +11,11 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { GraphQLModule } from '@nestjs/graphql';
+import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
+import { join } from 'path';
+import { ProductsModule } from './products/products.module';
+import { CategoriesModule } from './categories/categories.module';
 
 @Module({
   imports: [
@@ -46,6 +51,16 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
         },
       ],
     }),
+    GraphQLModule.forRoot<ApolloDriverConfig>({
+      driver: ApolloDriver,
+      autoSchemaFile: join(process.cwd(), 'src/schema.gql'),
+      sortSchema: true,
+      playground: false,
+      csrfPrevention: false, //problems with testing request
+      context: ({ req, res }) => ({ req, res }), //req.user accessible to resolvers/guards
+    }),
+    ProductsModule,
+    CategoriesModule,
   ],
   controllers: [AppController],
   providers: [
@@ -54,10 +69,12 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
     },
-    {
-      provide: APP_GUARD,
-      useClass: ThrottlerGuard,
-    },
+    // {
+    //   provide: APP_GUARD,
+    //   useClass: ThrottlerGuard,
+    // }, 
+    // Disabled for now, problems with graphql playground
+    // Only working in reset and forgot password routes
   ],
 })
 export class AppModule {}

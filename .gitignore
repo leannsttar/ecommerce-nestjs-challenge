@@ -60,4 +60,5 @@ project_rules.md
 
 .agents
 /generated/prisma
+.agent
 
