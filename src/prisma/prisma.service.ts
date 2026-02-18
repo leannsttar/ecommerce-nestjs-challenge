@@ -12,7 +12,7 @@ extends PrismaClient
       connectionString: process.env.DATABASE_URL!,
     });
     
-    super({ adapter });
+    super({ adapter, log: ['query'] });
   }
   
   async onModuleInit() {

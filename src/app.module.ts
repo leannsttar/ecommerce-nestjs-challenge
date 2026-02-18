@@ -16,6 +16,7 @@ import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { join } from 'path';
 import { ProductsModule } from './products/products.module';
 import { CategoriesModule } from './categories/categories.module';
+import { ApolloServerPluginLandingPageDisabled } from '@apollo/server/plugin/disabled';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { CategoriesModule } from './categories/categories.module';
       autoSchemaFile: join(process.cwd(), 'src/schema.gql'),
       sortSchema: true,
       playground: false,
+      plugins: [ApolloServerPluginLandingPageDisabled()],
       csrfPrevention: false, //problems with testing request
       context: ({ req, res }) => ({ req, res }), //req.user accessible to resolvers/guards
     }),

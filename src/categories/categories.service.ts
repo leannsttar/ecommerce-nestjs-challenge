@@ -13,16 +13,6 @@ export class CategoriesService {
     });
   }
 
-  async findOne(id: string) {
-    const category = await this.prisma.category.findFirst({
-      where: { id, deletedAt: null },
-    });
-    if (!category) {
-      throw new NotFoundException(`Category with ID ${id} not found`);
-    }
-    return category;
-  }
-
   async findByIds(ids: string[]) {
     return this.prisma.category.findMany({
       where: { id: { in: ids }, deletedAt: null },
@@ -52,11 +42,10 @@ export class CategoriesService {
 
   async remove(id: string) {
     try {
-      await this.prisma.category.update({
+      return await this.prisma.category.update({
         where: { id },
         data: { deletedAt: new Date() },
       });
-      return id;
     } catch (error) {
       // Prisma throws error with code P2025 when record not found
       if (error && typeof error === 'object' && 'code' in error && error.code === 'P2025') {
@@ -64,5 +53,13 @@ export class CategoriesService {
       }
       throw error;
     }
+  }
+
+  async getProducts(categoryId: string) {
+    const productCategories = await this.prisma.productCategory.findMany({
+      where: { categoryId },
+      include: { product: true },
+    });
+    return productCategories.map((pc) => pc.product);
   }
 }

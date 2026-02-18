@@ -13,10 +13,20 @@ input CreateCategoryInput {
 }
 
 input CreateProductInput {
-  categoryId: ID!
+  categoryIds: [ID!]!
   description: String!
+  featuredImage: String!
   images: [String!]
   name: String!
+  options: [ProductOptionInput!]!
+}
+
+input CreateVariantInput {
+  image: String
+  price: Int!
+  selectedOptions: [SelectedOptionInput!]!
+  sku: String!
+  stockQuantity: Int!
 }
 
 """
@@ -31,27 +41,21 @@ type Image {
 }
 
 type Mutation {
+  addProductVariant(id: ID!, input: CreateVariantInput!): Variant!
   createCategory(input: CreateCategoryInput!): Category!
-  createProduct(input: CreateProductInput!): ProductAdmin!
-  deleteCategory(id: ID!): ID!
-  deleteProduct(id: ID!): ID!
-  disableProduct(id: ID!): ProductAdmin!
-  enableProduct(id: ID!): ProductAdmin!
+  createProduct(input: CreateProductInput!): Product!
+  deleteCategory(id: ID!): Category!
+  deleteProduct(id: ID!): Product!
+  deleteProductVariant(id: ID!): Variant!
+  disableProduct(id: ID!): Product!
+  enableProduct(id: ID!): Product!
   updateCategory(id: ID!, input: UpdateCategoryInput!): Category!
-  updateProduct(id: ID!, input: UpdateProductInput!): ProductAdmin!
+  updateProduct(id: ID!, input: UpdateProductInput!): Product!
+  updateProductVariant(id: ID!, input: UpdateVariantInput!): Variant!
 }
 
-type Product implements ProductBase {
-  category: Category!
-  description: String!
-  featuredImage: Image
-  id: ID!
-  images: [Image!]!
-  name: String!
-}
-
-type ProductAdmin implements ProductBase {
-  category: Category!
+type Product {
+  categories: [Category!]!
   createdAt: DateTime!
   deletedAt: DateTime
   description: String!
@@ -60,25 +64,36 @@ type ProductAdmin implements ProductBase {
   images: [Image!]!
   isActive: Boolean!
   name: String!
+  options: [ProductOption!]!
   updatedAt: DateTime!
+  variants: [Variant!]!
 }
 
-interface ProductBase {
-  category: Category!
-  description: String!
-  featuredImage: Image
+type ProductOption {
   id: ID!
-  images: [Image!]!
   name: String!
+  values: [String!]!
+}
+
+input ProductOptionInput {
+  name: String!
+  values: [String!]!
 }
 
 type Query {
-  allProducts: [ProductAdmin!]!
   categories: [Category!]!
-  category(id: ID!): Category
   product(id: ID!): Product
-  productManager(id: ID!): ProductAdmin
   products: [Product!]!
+}
+
+type SelectedOption {
+  name: String!
+  value: String!
+}
+
+input SelectedOptionInput {
+  name: String!
+  value: String!
 }
 
 input UpdateCategoryInput {
@@ -86,7 +101,24 @@ input UpdateCategoryInput {
 }
 
 input UpdateProductInput {
-  categoryId: ID
+  categoryIds: [ID!]
   description: String
   name: String
+}
+
+input UpdateVariantInput {
+  image: String
+  price: Int
+  sku: String
+  stockQuantity: Int
+}
+
+type Variant {
+  id: ID!
+  image: String
+  price: Int!
+  product: Product!
+  selectedOptions: [SelectedOption!]!
+  sku: String!
+  stockQuantity: Int!
 }

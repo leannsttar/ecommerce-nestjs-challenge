@@ -1,4 +1,4 @@
-import { Resolver, Query, Mutation, Args, ID } from '@nestjs/graphql';
+import { Resolver, Query, Mutation, Args, ID, ResolveField, Parent } from '@nestjs/graphql';
 import { CategoriesService } from './categories.service';
 import { Category } from './entities/category.entity';
 import { CreateCategoryInput } from './dto/create-category.input';
@@ -6,11 +6,13 @@ import { UpdateCategoryInput } from './dto/update-category.input';
 import { UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Public } from '../auth/decorators/public.decorator';
-// TODO: Import CaslGuard when implemented
+import { Product } from '../products/entities/product.entity';
 
 @Resolver(() => Category)
 export class CategoriesResolver {
-  constructor(private readonly categoriesService: CategoriesService) {}
+  constructor(
+    private readonly categoriesService: CategoriesService,
+  ) {}
 
   @Public()
   @Query(() => [Category], { name: 'categories' })
@@ -18,11 +20,6 @@ export class CategoriesResolver {
     return this.categoriesService.findAll();
   }
 
-  @Public()
-  @Query(() => Category, { name: 'category', nullable: true })
-  findOne(@Args('id', { type: () => ID }) id: string) {
-    return this.categoriesService.findOne(id);
-  }
 
   @Mutation(() => Category)
   //@UseGuards(CaslGuard when implemented)
@@ -39,9 +36,15 @@ export class CategoriesResolver {
     return this.categoriesService.update(id, input);
   }
 
-  @Mutation(() => ID)
+  @Mutation(() => Category)
   //@UseGuards(CaslGuard when implemented)
   deleteCategory(@Args('id', { type: () => ID }) id: string) {
     return this.categoriesService.remove(id);
+  }
+
+
+  @ResolveField(() => [Product])
+  products(@Parent() category: Category) {
+    return this.categoriesService.getProducts(category.id);
   }
 }

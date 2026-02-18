@@ -44,7 +44,7 @@ Enum payment_method {
 Table users {
   id uuid [primary key]
   role user_role [default: 'client']
-  stripe_customer_id varchar
+  stripe_customer_id varchar [null]
   email varchar [unique]
   password_hash varchar
   full_name varchar
@@ -58,7 +58,7 @@ Table users {
 Table user_addresses {
   id uuid [primary key]
   user_id uuid [ref: > users.id]
-  address_line1 varchar
+  address_line varchar
   city varchar
   country varchar
   postal_code varchar
@@ -87,8 +87,7 @@ Table categories {
 // One-to-many: each product belongs to one category
 Table products {
   id uuid [primary key]
-  category_id uuid [ref: > categories.id]
-  title varchar
+  name varchar
   description text
   is_active bool [default: true]
   created_at timestamp
@@ -96,10 +95,17 @@ Table products {
   deleted_at timestamp
 }
 
+Table product_categories {
+  product_id uuid [ref: > products.id]
+  category_id uuid [ref: > categories.id]
+  indexes {
+    (product_id, category_id) [pk]
+  }
+}
+
 Table product_variants {
   id uuid [primary key]
   product_id uuid [ref: > products.id]
-  image_url text [null]
   sku varchar [unique]
   price int [note: 'Price in cents']
   stock_quantity integer
@@ -134,9 +140,10 @@ Table product_variant_values {
 
 Table product_images {
   id uuid [primary key]
-  product_id uuid [ref: > products.id]
+  product_id uuid [ref: > products.id, null]
+  product_variant_id uuid [ref: > product_variants.id, null]
   is_main boolean
-  url text
+  key text
   created_at timestamp
 }
 
@@ -151,7 +158,6 @@ Table cart_items {
   cart_id uuid [ref: > carts.id]
   product_variant_id uuid [ref: > product_variants.id]
   quantity integer
-  created_at timestamp
 
   indexes {
     (cart_id, product_variant_id) [unique]
@@ -232,8 +238,6 @@ Table promo_codes {
 ISO-8601 UTC DateTime (e.g. 2026-02-06T15:30:00Z)
 """
 scalar DateTime
-scalar PositiveInt
-scalar NonNegativeInt
 
 enum Role {
   CLIENT
@@ -277,7 +281,7 @@ type MonetaryAmount {
   """
   Amount in cents (e.g., 2000 = $20.00)
   """
-  amount: PositiveInt!
+  amount: Int!
   currency: String!
   """
   Human-readable formatted string (e.g., "$20.00")
@@ -307,47 +311,7 @@ type Category {
   products: [Product!]
 }
 
-"""
-Base contract to define the minimum structure of Product
-"""
-interface ProductBase {
-  id: ID!
-  title: String!
-  description: String!
-  category: Category!
-  featuredImage: Image
-  images: [Image!]!
-  options: [ProductOption!]!
-  variants: [Variant!]!
-}
-
-"""
-Public product view — only shows active, non-deleted products
-"""
-type Product implements ProductBase {
-  id: ID!
-  title: String!
-  description: String!
-  category: Category!
-  """
-  Main product image (is_main = true)
-  """
-  featuredImage: Image
-  images: [Image!]!
-  """
-  Available options (e.g., Color, Size)
-  """
-  options: [ProductOption!]!
-  """
-  All product variants
-  """
-  variants: [Variant!]!
-}
-
-"""
-Admin product view with metadata (isActive, timestamps, soft deletes)
-"""
-type ProductAdmin implements ProductBase {
+type Product {
   id: ID!
   title: String!
   description: String!
@@ -394,7 +358,7 @@ type Variant {
   """
   sku: String!
   price: MonetaryAmount!
-  stockQuantity: NonNegativeInt!
+  stockQuantity: Int!
   product: Product!
   image: Image
   """
@@ -533,94 +497,38 @@ type PromoCode {
 # ─────────────────────────────────────────────────
 
 type Query {
-  # PUBLIC
-
-  """
-  Get a single product by ID.
-  Returns null if product is inactive, deleted, or not found.
-  """
+  # --- PUBLIC ---
   product(id: ID!): Product
-
-  """
-  List products with cursor-based pagination.
-  Only returns active, non-deleted products.
-  """
-  products(first: Int = 15, after: String, categoryId: ID): ProductConnection!
+  products(limit: Int = 15, offset: Int = 0, categoryId: ID): PaginatedProducts!
 
   categories: [Category!]!
-  category(id: ID!): Category
 
-  # CLIENT
-
-  """
-  Get current authenticated user.
-  """
+  # --- AUTHENTICATED USER ---
   me: User
-
-  """
-  Get current user's cart.
-  """
   myCart: Cart
-
-  """
-  Get current user's order history with optional filters.
-  """
-  myOrders(
-    filter: OrderFilterInput
-    first: Int = 20
-    after: String
-  ): OrderConnection!
-
-  """
-  Get current user's favorite products.
-  """
   myFavorites: [Favorite!]!
 
-  # DELIVERY PERSON
+  # --- UNIFIED QUERIES (Filtered by CASL) ---
 
   """
-  Get orders assigned to current delivery person (status: shipped).
+  Get a specific order by ID.
+  Access is determined by user role via CASL.
   """
-  myDeliveries(first: Int = 20, after: String): OrderConnection!
+  order(id: ID!): Order
 
   """
-  Get delivery history for current delivery person (status: delivered).
+  Get orders with optional filters.
+  - Clients see their own orders.
+  - Delivery persons see their assigned orders.
+  - Managers see all orders.
   """
-  deliveryHistory(first: Int = 20, after: String): OrderConnection!
+  orders(
+    filter: OrderFilterInput
+    limit: Int = 20
+    offset: Int = 0
+  ): PaginatedOrders!
 
-  # MANAGER
-
-  """
-  Manager-only queries requiring MANAGER role.
-  """
-  manager: ManagerQuery
-}
-
-"""
-Manager-only queries for product, order, and promo management.
-"""
-type ManagerQuery {
-  """
-  List all products with admin metadata.
-  Can optionally include soft-deleted products.
-  Requires MANAGER role.
-  """
-  allProducts(
-    first: Int = 15
-    after: String
-    includeDeleted: Boolean = false
-  ): ProductAdminConnection!
-
-  """
-  List all orders across all customers.
-  Requires MANAGER role.
-  """
-  allOrders(first: Int = 20, after: String): OrderConnection!
-
-  """
-  List all promo codes.
-  Requires MANAGER role.
-  """
+  # --- MANAGER ONLY ---
   allPromoCodes: [PromoCode!]!
 }
 
@@ -628,48 +536,29 @@ type ManagerQuery {
 # PAGINATION
 # ─────────────────────────────────────────────────
 
-type PageInfo {
+type PaginatedProducts {
   """
-  Whether more results exist after this page.
+  list of products in the current page(based on limit and offset).
   """
-  hasNextPage: Boolean!
+  items: [Product!]!
+
   """
-  Cursor to fetch next page.
+  All products that match
+  Useful to calculate total pages
   """
-  endCursor: String
+  total: Int!
 }
 
-type ProductEdge {
-  cursor: String!
-  node: Product!
-}
+type PaginatedOrders {
+  """
+  list of orders in the current page
+  """
+  items: [Order!]!
 
-type ProductConnection {
-  edges: [ProductEdge!]!
-  pageInfo: PageInfo!
-  totalCount: Int!
-}
-
-type ProductAdminConnection {
-  edges: [ProductAdminEdge!]!
-  pageInfo: PageInfo!
-  totalCount: Int!
-}
-
-type ProductAdminEdge {
-  cursor: String!
-  node: ProductAdmin!
-}
-
-type OrderEdge {
-  cursor: String!
-  node: Order!
-}
-
-type OrderConnection {
-  edges: [OrderEdge!]!
-  pageInfo: PageInfo!
-  totalCount: Int!
+  """
+  Orders that match with the filters and authorization
+  """
+  total: Int!
 }
 
 # ─────────────────────────────────────────────────
@@ -680,19 +569,10 @@ type Mutation {
   # ADDRESSES
   addAddress(input: CreateAddressInput!): Address!
   updateAddress(id: ID!, input: UpdateAddressInput!): Address!
-  deleteAddress(id: ID!): ID!
+  deleteAddress(id: ID!): Address!
 
   # FAVORITES
-  """
-  Add product to user's favorites.
-  Returns true if added, false if already favorited.
-  """
-  addFavorite(productId: ID!): Boolean!
-  """
-  Remove product from user's favorites.
-  Returns true if removed, false if wasn't favorited.
-  """
-  removeFavorite(productId: ID!): Boolean!
+  toggleFavorite(productId: ID!): Boolean!
 
   # CATEGORIES (manager)
   """
@@ -704,7 +584,7 @@ type Mutation {
   Soft delete category. Returns ID of deleted category.
   Requires MANAGER role.
   """
-  deleteCategory(id: ID!): ID!
+  deleteCategory(id: ID!): Category!
 
   # PRODUCTS (manager)
   """
@@ -722,7 +602,7 @@ type Mutation {
   Soft delete product. Returns ID of deleted product.
   Requires MANAGER role.
   """
-  deleteProduct(id: ID!): ID!
+  deleteProduct(id: ID!): Product!
   """
   Disable product (sets isActive = false).
   Requires MANAGER role.
@@ -739,29 +619,29 @@ type Mutation {
   Add new variant to existing product.
   Requires MANAGER role.
   """
-  addProductVariant(productId: ID!, input: CreateVariantInput!): Product!
+  addVariant(productId: ID!, input: CreateVariantInput!): Product!
   """
   Update existing product variant.
   Requires MANAGER role.
   """
-  updateProductVariant(variantId: ID!, input: UpdateVariantInput!): Product!
+  updateVariant(id: ID!, input: UpdateVariantInput!): Product!
   """
   Delete product variant. Returns updated product.
   Requires MANAGER role.
   """
-  deleteProductVariant(variantId: ID!): Product!
+  deleteVariant(id: ID!): Product!
 
   # IMAGES (manager)
   """
   Add image to product gallery.
   Requires MANAGER role.
   """
-  addProductImage(productId: ID!, input: AddImageInput): Product!
+  addProductImage(id: ID!, input: AddImageInput): Product!
   """
   Delete image from product gallery.
   Requires MANAGER role.
   """
-  deleteProductImage(imageId: ID!): Product!
+  deleteProductImage(id: ID!): Product!
 
   # CART (client)
   """
@@ -774,11 +654,11 @@ type Mutation {
   Update cart item quantity.
   Quantity must be >= 1. Use removeItemFromCart to delete items.
   """
-  updateCartItemQuantity(itemId: ID!, quantity: Int!): Cart!
+  updateCartItemQuantity(id: ID!, quantity: Int!): Cart!
   """
   Remove item from cart.
   """
-  removeItemFromCart(itemId: ID!): Cart!
+  removeItemFromCart(id: ID!): Cart!
   """
   Remove all items from cart.
   """
@@ -871,7 +751,7 @@ input CreateProductInput {
   """
   images: [String!]
   """
-  Product options (e.g., [{name: "Color", values: ["Red", "Blue"]}])
+  Product options (e.g., [{name: "Color", values: ["Red", "Blue"])
   """
   options: [ProductOptionInput!]!
   """
@@ -884,7 +764,7 @@ input UpdateProductInput {
   title: String
   description: String
   categoryId: ID
-  images: [String!]
+  #isActive: Boolean
 }
 
 # Variants
@@ -904,16 +784,16 @@ input CreateVariantInput {
   """
   Price in cents (e.g., 2000 = $20.00)
   """
-  price: PositiveInt!
-  stock: PositiveInt!
+  price: Int!
+  stock: Int!
   selectedOptions: [SelectedOptionInput!]!
   imageUrl: String
 }
 
 input UpdateVariantInput {
   sku: String
-  price: PositiveInt
-  stock: NonNegativeInt
+  price: Int
+  stock: Int
   imageUrl: String
 }
 
@@ -954,13 +834,32 @@ input CheckoutInput {
   promoCode: String
 }
 
-# Order Filters
 input OrderFilterInput {
-  dateFrom: DateTime
-  dateTo: DateTime
+  """
+  Filtrar por el estado actual de la orden.
+  Útil para el Repartidor (SHIPPED o DELIVERED) y para el Cliente.
+  """
   status: OrderStatus
-  priceMin: Int
-  priceMax: Int
+
+  """
+  Rango de fechas: Fecha de inicio (formato ISO 8601, ej. "2026-02-01T00:00:00Z")
+  """
+  startDate: String
+
+  """
+  Rango de fechas: Fecha de fin (formato ISO 8601)
+  """
+  endDate: String
+
+  """
+  Rango de precios: Precio mínimo pagado
+  """
+  minPrice: Float
+
+  """
+  Rango de precios: Precio máximo pagado
+  """
+  maxPrice: Float
 }
 
 # Promo Codes
@@ -994,19 +893,3 @@ type PaymentIntentResult {
   amount: MonetaryAmount!
 }
 ```
-
-## 📌 REST Endpoints (Not in GraphQL)
-
-These endpoints remain REST per `project_rules.md`:
-
-| Endpoint                  | Method | Description                                          |
-| ------------------------- | ------ | ---------------------------------------------------- |
-| `/auth/signup`            | POST   | User registration                                    |
-| `/auth/signin`            | POST   | User login                                           |
-| `/auth/signout`           | POST   | User logout                                          |
-| `/auth/forgot-password`   | POST   | Request password reset                               |
-| `/auth/reset-password`    | POST   | Reset password with token                            |
-| `/auth/refresh`           | POST   | Refresh access token                                 |
-| `/payments/create-link`   | POST   | Create Stripe Payment Link (single product purchase) |
-| `/payments/create-intent` | POST   | Create Stripe Payment Intent (cart checkout)         |
-| `/webhook`                | POST   | Stripe webhook handler                               |

@@ -5,9 +5,8 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider     = "prisma-client"
-  output       = "../generated/prisma"
-  moduleFormat = "cjs"
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
 }
 
 datasource db {
@@ -62,14 +61,13 @@ model Category {
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
 
-  products Product[]
+  products ProductCategory[]
 
   @@map("categories")
 }
 
 model Product {
   id          String    @id @default(uuid()) @db.Uuid
-  categoryId  String    @map("category_id") @db.Uuid
   name        String
   description String    @db.Text
   isActive    Boolean   @default(true) @map("is_active")
@@ -77,20 +75,90 @@ model Product {
   updatedAt   DateTime  @updatedAt @map("updated_at")
   deletedAt   DateTime? @map("deleted_at")
 
-  category Category       @relation(fields: [categoryId], references: [id])
-  images   ProductImage[]
+  categories      ProductCategory[]
+  images          ProductImage[]
+  productOptions  ProductOption[]
+  productVariants ProductVariant[]
 
   @@map("products")
+}
+
+model ProductCategory {
+  id         String @id @default(uuid()) @db.Uuid
+  productId  String @map("product_id") @db.Uuid
+  categoryId String @map("category_id") @db.Uuid
+
+  product  Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, categoryId])
+  @@map("product_categories")
 }
 
 model ProductImage {
   id        String   @id @default(uuid()) @db.Uuid
   productId String   @map("product_id") @db.Uuid
   isMain    Boolean  @map("is_main")
-  url       String   @db.Text
+  key       String   @db.Text
   createdAt DateTime @default(now()) @map("created_at")
 
-  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product          Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productVariant   ProductVariant? @relation(fields: [productVariantId], references: [id])
+  productVariantId String?         @db.Uuid
 
   @@map("product_images")
+}
+
+model ProductOption {
+  id        String   @id @default(uuid()) @db.Uuid
+  productId String   @map("product_id") @db.Uuid
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  product Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
+  values  ProductOptionValue[]
+
+  @@map("product_options")
+}
+
+model ProductOptionValue {
+  id        String   @id @default(uuid()) @db.Uuid
+  optionId  String   @map("option_id") @db.Uuid
+  value     String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  option   ProductOption         @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  variants ProductVariantValue[]
+
+  @@map("product_option_values")
+}
+
+model ProductVariant {
+  id            String    @id @default(uuid()) @db.Uuid
+  productId     String    @map("product_id") @db.Uuid
+  sku           String    @unique
+  price         Int
+  stockQuantity Int       @map("stock_quantity")
+  image         String?   @db.Text
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  deletedAt     DateTime? @map("deleted_at")
+
+  product       Product               @relation(fields: [productId], references: [id], onDelete: Cascade)
+  optionValues  ProductVariantValue[]
+  productImages ProductImage[]
+
+  @@map("product_variants")
+}
+
+model ProductVariantValue {
+  productVariantId     String @map("product_variant_id") @db.Uuid
+  productOptionValueId String @map("product_option_value_id") @db.Uuid
+
+  productVariant     ProductVariant     @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
+  productOptionValue ProductOptionValue @relation(fields: [productOptionValueId], references: [id], onDelete: Cascade)
+
+  @@id([productVariantId, productOptionValueId])
+  @@map("product_variant_values")
 }
