@@ -6,7 +6,6 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
 }
 
 datasource db {
@@ -99,7 +98,7 @@ model ProductImage {
   id        String   @id @default(uuid()) @db.Uuid
   productId String   @map("product_id") @db.Uuid
   isMain    Boolean  @map("is_main")
-  key       String   @db.Text
+  url       String   @db.Text
   createdAt DateTime @default(now()) @map("created_at")
 
   product          Product         @relation(fields: [productId], references: [id], onDelete: Cascade)

@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  UnauthorizedException,
+  BadRequestException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { UsersService } from '../users/users.service';
 import { PasswordService } from './services/password.service';
@@ -7,7 +11,7 @@ import { RefreshTokenService } from './services/refresh-token.service';
 import { AccessTokenService } from './services/access-token.service';
 import { SignUpDto } from './dto/signup.dto';
 import { SignInDto } from './dto/signin.dto';
-import { UserRole } from 'generated/prisma/client';
+import { UserRole } from '@prisma/client';
 import { AuthResult } from './types/auth-result.type';
 import { EmailService } from '../notifications/services/email.service';
 
@@ -30,7 +34,7 @@ export class AuthService {
 
     const user = await this.usersService.create({
       email: dto.email,
-      passwordHash, 
+      passwordHash,
       fullName: dto.fullName,
       // role: dto.role,
     });
@@ -57,11 +61,9 @@ export class AuthService {
     return this.buildAuthResponse(user.id, user.email, user.role);
   }
 
-  async refresh(
-    refreshToken: string,
-  ): Promise<AuthResult> {
-
-    const storedToken = await this.refreshTokenService.validateRefreshToken(refreshToken);
+  async refresh(refreshToken: string): Promise<AuthResult> {
+    const storedToken =
+      await this.refreshTokenService.validateRefreshToken(refreshToken);
     const user = await this.usersService.findById(storedToken.userId);
 
     await this.refreshTokenService.revokeRefreshTokenById(storedToken.id);
@@ -70,7 +72,8 @@ export class AuthService {
   }
 
   async signOut(refreshToken: string): Promise<void> {
-    const storedToken = await this.refreshTokenService.validateRefreshToken(refreshToken);
+    const storedToken =
+      await this.refreshTokenService.validateRefreshToken(refreshToken);
     await this.refreshTokenService.revokeRefreshTokenById(storedToken.id);
   }
 
@@ -82,7 +85,8 @@ export class AuthService {
       return;
     }
 
-    const { resetToken, resetTokenHash, expiresAt } = this.resetTokenService.createResetTokenData();
+    const { resetToken, resetTokenHash, expiresAt } =
+      this.resetTokenService.createResetTokenData();
 
     await this.usersService.saveResetToken(user.id, resetTokenHash, expiresAt);
 
@@ -95,7 +99,12 @@ export class AuthService {
     console.log('='.repeat(80));
 
     try {
-      await this.emailService.sendResetPasswordEmail(user.email, resetToken, expiresAt, new Date());
+      await this.emailService.sendResetPasswordEmail(
+        user.email,
+        resetToken,
+        expiresAt,
+        new Date(),
+      );
     } catch (error) {
       console.error('Email sending failed:', error);
     }
@@ -109,8 +118,12 @@ export class AuthService {
       throw new BadRequestException('Invalid or expired reset token');
     }
 
-    const newPasswordHash =await this.passwordService.hashPassword(newPassword);
-    await this.usersService.updatePasswordAndClearResetToken(user.id, newPasswordHash);
+    const newPasswordHash =
+      await this.passwordService.hashPassword(newPassword);
+    await this.usersService.updatePasswordAndClearResetToken(
+      user.id,
+      newPasswordHash,
+    );
 
     // revoke all user refresh tokens for security
     await this.refreshTokenService.revokeAllUserTokens(user.id);
@@ -127,13 +140,13 @@ export class AuthService {
     email: string,
     role: UserRole,
   ): Promise<AuthResult> {
-    const { accessToken, expiresIn } = await this.accessTokenService.generateAccessToken(
-      userId,
-      email,
-      role,
+    const { accessToken, expiresIn } =
+      await this.accessTokenService.generateAccessToken(userId, email, role);
+    const { token: refreshToken } =
+      await this.refreshTokenService.createRefreshToken(userId);
+    const refreshTokenExpiration = this.config.getOrThrow<number>(
+      'app.refreshTokenExpiration',
     );
-    const { token: refreshToken } = await this.refreshTokenService.createRefreshToken(userId);
-    const refreshTokenExpiration = this.config.getOrThrow<number>('app.refreshTokenExpiration');
     const refreshTokenExpirationMs = parseDurationToMs(refreshTokenExpiration);
 
     return { accessToken, expiresIn, refreshToken, refreshTokenExpirationMs };

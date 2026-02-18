@@ -11,6 +11,7 @@ import { ProductsService } from '../services/products.service';
 import { Product } from '../entities/product.entity';
 import { CreateProductInput } from '../dto/create-product.input';
 import { UpdateProductInput } from '../dto/update-product.input';
+import { AddImageInput } from '../dto/add-image.input';
 
 import { Category } from '../../categories/entities/category.entity';
 import { Image } from '../entities/image.entity';
@@ -73,18 +74,20 @@ export class ProductsResolver {
 
   // IMAGE MUTATIONS
 
-  // @Mutation(() => Image)
-  // addProductImage(
-  //   @Args('productId', { type: () => ID }) productId: string,
-  //   @Args('imageKey') imageKey: string,
-  // ) {
-  //   return this.productsService.addProductImage(productId, imageKey);
-  // }
+  @Mutation(() => Image)
+  addProductImage(
+    @Args('productId', { type: () => ID }, ParseUUIDPipe) productId: string,
+    @Args('input') input: AddImageInput,
+  ) {
+    return this.productsService.addProductImage(productId, input);
+  }
 
-  // @Mutation(() => Image)
-  // deleteProductImage(@Args('id', { type: () => ID }) id: string) {
-  //   return this.productsService.deleteProductImage(id);
-  // }
+  @Mutation(() => Image)
+  deleteProductImage(
+    @Args('id', { type: () => ID }, ParseUUIDPipe) id: string,
+  ) {
+    return this.productsService.deleteProductImage(id);
+  }
 
   // FIELD RESOLVERE
 

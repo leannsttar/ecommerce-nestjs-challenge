@@ -2,6 +2,10 @@
 # THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
 # ------------------------------------------------------
 
+input AddImageInput {
+  imageUrl: String!
+}
+
 type Category {
   id: ID!
   name: String!
@@ -41,11 +45,13 @@ type Image {
 }
 
 type Mutation {
+  addProductImage(input: AddImageInput!, productId: ID!): Image!
   addProductVariant(id: ID!, input: CreateVariantInput!): Variant!
   createCategory(input: CreateCategoryInput!): Category!
   createProduct(input: CreateProductInput!): Product!
   deleteCategory(id: ID!): Category!
   deleteProduct(id: ID!): Product!
+  deleteProductImage(id: ID!): Image!
   deleteProductVariant(id: ID!): Variant!
   disableProduct(id: ID!): Product!
   enableProduct(id: ID!): Product!

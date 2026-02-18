@@ -6,6 +6,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateProductInput } from '../dto/create-product.input';
 import { UpdateProductInput } from '../dto/update-product.input';
+import { AddImageInput } from '../dto/add-image.input';
 
 @Injectable()
 export class ProductsService {
@@ -38,15 +39,15 @@ export class ProductsService {
     }
 
     // Construir array de imágenes a guardar
-    const imagesToCreate: Array<{ key: string; isMain: boolean }> = [];
+    const imagesToCreate: Array<{ url: string; isMain: boolean }> = [];
 
     if (featuredImage) {
-      imagesToCreate.push({ key: featuredImage, isMain: true });
+      imagesToCreate.push({ url: featuredImage, isMain: true });
     }
 
     if (galleryImages.length > 0) {
       imagesToCreate.push(
-        ...galleryImages.map((key) => ({ key, isMain: false })),
+        ...galleryImages.map((imageUrl) => ({ url: imageUrl, isMain: false })),
       );
     }
 
@@ -193,6 +194,46 @@ export class ProductsService {
         error.code === 'P2025'
       ) {
         throw new NotFoundException(`Product with ID ${id} not found`);
+      }
+      throw error;
+    }
+  }
+
+  async addProductImage(productId: string, input: AddImageInput) {
+    try {
+      return await this.prisma.productImage.create({
+        data: {
+          productId,
+          url: input.imageUrl,
+          isMain: false,
+        },
+      });
+    } catch (error) {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        error.code === 'P2003'
+      ) {
+        throw new NotFoundException(`Product with ID ${productId} not found`);
+      }
+      throw error;
+    }
+  }
+
+  async deleteProductImage(id: string) {
+    try {
+      return await this.prisma.productImage.delete({
+        where: { id },
+      });
+    } catch (error) {
+      if (
+        error &&
+        typeof error === 'object' &&
+        'code' in error &&
+        error.code === 'P2025'
+      ) {
+        throw new NotFoundException(`Image with ID ${id} not found`);
       }
       throw error;
     }

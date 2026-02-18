@@ -14,17 +14,15 @@ export class ProductRelationsService {
   }
 
   async getImages(productId: string) {
-    const images = await this.prisma.productImage.findMany({
+    return this.prisma.productImage.findMany({
       where: { productId },
     });
-    return images.map((img) => ({ ...img, url: img.key }));
   }
 
   async getFeaturedImage(productId: string) {
-    const image = await this.prisma.productImage.findFirst({
+    return this.prisma.productImage.findFirst({
       where: { productId, isMain: true },
     });
-    return image ? { ...image, url: image.key } : null;
   }
 
   async getOptions(productId: string) {
