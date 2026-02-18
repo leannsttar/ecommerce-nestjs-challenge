@@ -60,6 +60,11 @@ type Mutation {
   updateProductVariant(id: ID!, input: UpdateVariantInput!): Variant!
 }
 
+type PaginatedProducts {
+  items: [Product!]!
+  total: Int!
+}
+
 type Product {
   categories: [Category!]!
   createdAt: DateTime!
@@ -89,7 +94,7 @@ input ProductOptionInput {
 type Query {
   categories: [Category!]!
   product(id: ID!): Product
-  products: [Product!]!
+  products(categoryId: ID, limit: Int! = 15, offset: Int! = 0): PaginatedProducts!
 }
 
 type SelectedOption {

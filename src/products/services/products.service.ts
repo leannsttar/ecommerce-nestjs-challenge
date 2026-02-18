@@ -12,10 +12,27 @@ import { AddImageInput } from '../dto/add-image.input';
 export class ProductsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findAll() {
-    return this.prisma.product.findMany({
-      where: { deletedAt: null },
-    });
+  async findAll(limit: number, offset: number, categoryId?: string) {
+    const where = {
+      deletedAt: null,
+      ...(categoryId && {
+        categories: {
+          some: { categoryId },
+        },
+      }),
+    };
+
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.product.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.product.count({ where }),
+    ]);
+
+    return { items, total };
   }
 
   async findOne(id: string) {

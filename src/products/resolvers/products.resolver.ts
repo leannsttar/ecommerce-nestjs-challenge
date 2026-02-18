@@ -3,12 +3,14 @@ import {
   Query,
   Args,
   ID,
+  Int,
   ResolveField,
   Parent,
   Mutation,
 } from '@nestjs/graphql';
 import { ProductsService } from '../services/products.service';
 import { Product } from '../entities/product.entity';
+import { PaginatedProducts } from '../entities/paginated-products.entity';
 import { CreateProductInput } from '../dto/create-product.input';
 import { UpdateProductInput } from '../dto/update-product.input';
 import { AddImageInput } from '../dto/add-image.input';
@@ -31,9 +33,13 @@ export class ProductsResolver {
   ) {}
 
   @Public()
-  @Query(() => [Product], { name: 'products' })
-  findAll() {
-    return this.productsService.findAll();
+  @Query(() => PaginatedProducts, { name: 'products' })
+  findAll(
+    @Args('limit', { type: () => Int, defaultValue: 15 }) limit: number,
+    @Args('offset', { type: () => Int, defaultValue: 0 }) offset: number,
+    @Args('categoryId', { type: () => ID, nullable: true }) categoryId?: string,
+  ) {
+    return this.productsService.findAll(limit, offset, categoryId);
   }
 
   @Public()
