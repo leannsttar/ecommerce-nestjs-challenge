@@ -24,6 +24,7 @@ export class AuthController {
   }
 
   @Public()
+  @Throttle({ short: { limit: 5, ttl: 60000 } })
   @Post('signin')
   async signIn(@Body() dto: SignInDto): Promise<AuthResponseDto> {
     return this.authService.signIn(dto);

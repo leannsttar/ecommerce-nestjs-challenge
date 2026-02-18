@@ -1,0 +1,135 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+input AddImageInput {
+  imageUrl: String!
+}
+
+type Category {
+  id: ID!
+  name: String!
+  products: [Product!]
+}
+
+input CreateCategoryInput {
+  name: String!
+}
+
+input CreateProductInput {
+  categoryIds: [ID!]!
+  description: String!
+  featuredImage: String!
+  images: [String!]
+  name: String!
+  options: [ProductOptionInput!]!
+}
+
+input CreateVariantInput {
+  image: String
+  price: Int!
+  selectedOptions: [SelectedOptionInput!]!
+  sku: String!
+  stockQuantity: Int!
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+type Image {
+  id: ID!
+  isMain: Boolean!
+  url: String!
+}
+
+type Mutation {
+  addProductImage(input: AddImageInput!, productId: ID!): Image!
+  addProductVariant(id: ID!, input: CreateVariantInput!): Variant!
+  createCategory(input: CreateCategoryInput!): Category!
+  createProduct(input: CreateProductInput!): Product!
+  deleteCategory(id: ID!): Category!
+  deleteProduct(id: ID!): Product!
+  deleteProductImage(id: ID!): Image!
+  deleteProductVariant(id: ID!): Variant!
+  disableProduct(id: ID!): Product!
+  enableProduct(id: ID!): Product!
+  updateCategory(id: ID!, input: UpdateCategoryInput!): Category!
+  updateProduct(id: ID!, input: UpdateProductInput!): Product!
+  updateProductVariant(id: ID!, input: UpdateVariantInput!): Variant!
+}
+
+type PaginatedProducts {
+  items: [Product!]!
+  total: Int!
+}
+
+type Product {
+  categories: [Category!]!
+  createdAt: DateTime!
+  deletedAt: DateTime
+  description: String!
+  featuredImage: Image
+  id: ID!
+  images: [Image!]!
+  isActive: Boolean!
+  name: String!
+  options: [ProductOption!]!
+  updatedAt: DateTime!
+  variants: [Variant!]!
+}
+
+type ProductOption {
+  id: ID!
+  name: String!
+  values: [String!]!
+}
+
+input ProductOptionInput {
+  name: String!
+  values: [String!]!
+}
+
+type Query {
+  categories: [Category!]!
+  product(id: ID!): Product
+  products(categoryId: ID, limit: Int! = 15, offset: Int! = 0): PaginatedProducts!
+}
+
+type SelectedOption {
+  name: String!
+  value: String!
+}
+
+input SelectedOptionInput {
+  name: String!
+  value: String!
+}
+
+input UpdateCategoryInput {
+  name: String
+}
+
+input UpdateProductInput {
+  categoryIds: [ID!]
+  description: String
+  name: String
+}
+
+input UpdateVariantInput {
+  image: String
+  price: Int
+  sku: String
+  stockQuantity: Int
+}
+
+type Variant {
+  id: ID!
+  image: String
+  price: Int!
+  product: Product!
+  selectedOptions: [SelectedOption!]!
+  sku: String!
+  stockQuantity: Int!
+}

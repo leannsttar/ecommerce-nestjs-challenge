@@ -4,7 +4,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
 import { UsersService } from '../../users/users.service';
 import { JwtPayload } from '../../common/interfaces/jwt-payload.interface';
-import { User } from 'generated/prisma/client';
+import { User } from '@prisma/client';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
@@ -19,7 +19,9 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     });
   }
 
-  async validate(payload: JwtPayload): Promise<Pick<User, 'id' | 'role' | 'email' | 'fullName'>> {
+  async validate(
+    payload: JwtPayload,
+  ): Promise<Pick<User, 'id' | 'role' | 'email' | 'fullName'>> {
     const user = await this.usersService.findById(payload.sub);
 
     if (user.deletedAt) {
@@ -30,7 +32,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       id: user.id,
       role: user.role,
       email: user.email,
-      fullName: user.fullName
+      fullName: user.fullName,
     };
   }
 }

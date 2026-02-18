@@ -9,7 +9,7 @@ import {
   IsOptional,
 } from 'class-validator';
 import { Transform } from 'class-transformer';
-import { UserRole } from 'generated/prisma/client';
+import { UserRole } from '@prisma/client';
 
 export class SignUpDto {
   @IsEmail()
@@ -17,15 +17,19 @@ export class SignUpDto {
   email: string;
 
   @IsString()
-  @IsStrongPassword({
-    minLength: 8,
-    minLowercase: 1,
-    minUppercase: 1,
-    minNumbers: 1,
-    minSymbols: 0,
-  }, {
-    message: 'Password must have at least 8 characters, one uppercase letter, one lowercase letter and one number'
-  })
+  @IsStrongPassword(
+    {
+      minLength: 8,
+      minLowercase: 1,
+      minUppercase: 1,
+      minNumbers: 1,
+      minSymbols: 0,
+    },
+    {
+      message:
+        'Password must have at least 8 characters, one uppercase letter, one lowercase letter and one number',
+    },
+  )
   password: string;
 
   @IsString()
