@@ -61,22 +61,27 @@ type Mutation {
 }
 
 type PaginatedProducts {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
   items: [Product!]!
-  total: Int!
+  limit: Int!
+  page: Int!
+  totalItems: Int!
+  totalPages: Int!
 }
 
 type Product {
   categories: [Category!]!
-  createdAt: DateTime!
+  createdAt: DateTime
   deletedAt: DateTime
   description: String!
   featuredImage: Image
   id: ID!
   images: [Image!]!
-  isActive: Boolean!
+  isActive: Boolean
   name: String!
   options: [ProductOption!]!
-  updatedAt: DateTime!
+  updatedAt: DateTime
   variants: [Variant!]!
 }
 
@@ -94,7 +99,7 @@ input ProductOptionInput {
 type Query {
   categories: [Category!]!
   product(id: ID!): Product
-  products(categoryId: ID, limit: Int! = 15, offset: Int! = 0): PaginatedProducts!
+  products(categoryId: ID, limit: Int! = 15, page: Int! = 1): PaginatedProducts!
 }
 
 type SelectedOption {
