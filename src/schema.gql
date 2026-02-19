@@ -44,6 +44,15 @@ input CreateProductInput {
   options: [ProductOptionInput!]!
 }
 
+input CreatePromoCodeInput {
+  code: String!
+  expiresAt: String!
+  minPurchase: Int
+  type: PromoType!
+  usageLimit: Int!
+  value: Int!
+}
+
 input CreateVariantInput {
   image: String
   price: Int!
@@ -70,17 +79,21 @@ type Mutation {
   clearCart: Cart!
   createCategory(input: CreateCategoryInput!): Category!
   createProduct(input: CreateProductInput!): Product!
+  createPromoCode(input: CreatePromoCodeInput!): PromoCode!
   deleteCategory(id: ID!): Category!
   deleteProduct(id: ID!): Product!
   deleteProductImage(id: ID!): Image!
   deleteProductVariant(id: ID!): Variant!
   disableProduct(id: ID!): Product!
+  disablePromoCode(id: ID!): PromoCode!
   enableProduct(id: ID!): Product!
+  enablePromoCode(id: ID!): PromoCode!
   removeItemFromCart(id: ID!): Cart!
   updateCartItemQuantity(id: ID!, input: UpdateCartItemInput!): Cart!
   updateCategory(id: ID!, input: UpdateCategoryInput!): Category!
   updateProduct(id: ID!, input: UpdateProductInput!): Product!
   updateProductVariant(id: ID!, input: UpdateVariantInput!): Variant!
+  updatePromoCode(id: ID!, input: UpdatePromoCodeInput!): PromoCode!
 }
 
 type PaginatedProducts {
@@ -119,11 +132,31 @@ input ProductOptionInput {
   values: [String!]!
 }
 
+type PromoCode {
+  code: String!
+  createdAt: DateTime!
+  expiresAt: DateTime!
+  id: ID!
+  isActive: Boolean!
+  minPurchase: Int
+  type: PromoType!
+  updatedAt: DateTime!
+  usageCount: Int!
+  usageLimit: Int!
+  value: Int!
+}
+
+enum PromoType {
+  FIXED_AMOUNT
+  PERCENTAGE
+}
+
 type Query {
   categories: [Category!]!
   myCart: Cart!
   product(id: ID!): Product
   products(categoryId: ID, limit: Int! = 15, page: Int! = 1): PaginatedProducts!
+  promoCodes: [PromoCode!]!
 }
 
 type SelectedOption {
@@ -148,6 +181,15 @@ input UpdateProductInput {
   categoryIds: [ID!]
   description: String
   name: String
+}
+
+input UpdatePromoCodeInput {
+  code: String
+  expiresAt: String
+  minPurchase: Int
+  type: PromoType
+  usageLimit: Int
+  value: Int
 }
 
 input UpdateVariantInput {
