@@ -12,6 +12,7 @@ import { Product } from 'src/modules/products/entities/product.entity';
 import { Category } from 'src/modules/categories/entities/category.entity';
 import { Variant } from 'src/modules/products/entities/variants/variant.entity';
 import { PromoCode } from 'src/modules/promo/entities/promo-code.entity';
+import { Favorite } from 'src/modules/favorites/entities/favorite.entity';
 
 export enum Action {
   Manage = 'manage', //all
@@ -22,7 +23,12 @@ export enum Action {
 }
 
 export type Subjects = InferSubjects<
-  typeof Product | typeof Category | typeof Variant | typeof PromoCode | 'all'
+  | typeof Product
+  | typeof Category
+  | typeof Variant
+  | typeof PromoCode
+  | typeof Favorite
+  | 'all'
 >;
 
 //abilitie is action and resource
@@ -44,6 +50,7 @@ export class CaslAbilityFactory {
     } else if (user.role === UserRole.CLIENT) {
       can(Action.Read, Product);
       can(Action.Read, Category);
+      can(Action.Manage, Favorite);
     }
 
     return build({

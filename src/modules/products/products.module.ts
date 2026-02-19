@@ -11,9 +11,10 @@ import { FeaturedImageDataLoader } from './loaders/featured-image.dataloader';
 import { OptionsDataLoader } from './loaders/options.dataloader';
 import { VariantsDataLoader } from './loaders/variants.dataloader';
 import { SelectedOptionsDataLoader } from './loaders/selected-options.dataloader';
+import { FavoritesModule } from '../favorites/favorites.module';
 
 @Module({
-  imports: [CategoriesModule, CaslModule],
+  imports: [CategoriesModule, CaslModule, FavoritesModule],
   providers: [
     ProductsResolver,
     VariantsResolver,

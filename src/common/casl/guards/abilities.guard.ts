@@ -5,7 +5,6 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { GqlExecutionContext } from '@nestjs/graphql';
 import { CaslAbilityFactory } from '../casl-ability.factory';
 import {
   CHECK_ABILITIES_KEY,
@@ -34,7 +33,6 @@ export class AbilitiesGuard implements CanActivate {
       return true;
     }
 
-    // get user from context
     const user = this.getUser(context);
 
     if (!user) {

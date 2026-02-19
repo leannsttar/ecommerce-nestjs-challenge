@@ -200,11 +200,11 @@ Table payments {
 Table favorites {
   id uuid [primary key]
   user_id uuid [ref: > users.id]
-  product_id uuid [ref: > products.id]
+  variant_id uuid [ref: > product_variants.id]
   created_at timestamp
 
   indexes {
-    (user_id, product_id) [unique]
+    (user_id, variant_id) [unique]
   }
 }
 
@@ -344,6 +344,11 @@ type Variant {
   Selected options for this variant (e.g., Color: Red, Size: M)
   """
   selectedOptions: [SelectedOption!]!
+  """
+  Whether the authenticated user has liked this variant.
+  Always false for unauthenticated requests.
+  """
+  isFavorite: Boolean!
 }
 
 type SelectedOption {
@@ -365,7 +370,7 @@ type Image {
 
 type Favorite {
   id: ID!
-  product: Product!
+  variant: Variant!
   createdAt: DateTime!
 }
 
@@ -549,7 +554,7 @@ type Mutation {
   deleteAddress(id: ID!): Address!
 
   # FAVORITES
-  toggleFavorite(productId: ID!): Boolean!
+  toggleFavorite(variantId: ID!): Boolean!
 
   # CATEGORIES (manager)
   """

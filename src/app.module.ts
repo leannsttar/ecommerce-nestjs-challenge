@@ -20,6 +20,7 @@ import { CartModule } from './modules/cart/cart.module';
 import { CaslModule } from './common/casl/casl.module';
 import { ApolloServerPluginLandingPageDisabled } from '@apollo/server/plugin/disabled';
 import { PromoModule } from './modules/promo/promo.module';
+import { FavoritesModule } from './modules/favorites/favorites.module';
 
 @Module({
   imports: [
@@ -80,6 +81,7 @@ import { PromoModule } from './modules/promo/promo.module';
     CategoriesModule,
     CartModule,
     PromoModule,
+    FavoritesModule,
     CaslModule,
   ],
   controllers: [AppController],
