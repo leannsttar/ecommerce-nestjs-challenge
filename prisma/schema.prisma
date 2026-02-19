@@ -36,6 +36,7 @@ model User {
   deletedAt DateTime? @map("deleted_at")
 
   refreshTokens RefreshToken[]
+  cartItems     CartItem[]
 
   @@map("users")
 }
@@ -147,6 +148,7 @@ model ProductVariant {
   product       Product               @relation(fields: [productId], references: [id], onDelete: Cascade)
   optionValues  ProductVariantValue[]
   productImages ProductImage[]
+  cartItems     CartItem[]
 
   @@map("product_variants")
 }
@@ -160,4 +162,19 @@ model ProductVariantValue {
 
   @@id([productVariantId, productOptionValueId])
   @@map("product_variant_values")
+}
+
+model CartItem {
+  id               String   @id @default(uuid()) @db.Uuid
+  userId           String   @map("user_id") @db.Uuid
+  productVariantId String   @map("product_variant_id") @db.Uuid
+  quantity         Int
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productVariant ProductVariant @relation(fields: [productVariantId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productVariantId])
+  @@map("cart_items")
 }

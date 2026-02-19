@@ -6,6 +6,25 @@ input AddImageInput {
   imageUrl: String!
 }
 
+input AddToCartInput {
+  quantity: Int! = 1
+  variantId: ID!
+}
+
+type Cart {
+  id: ID!
+  items: [CartItem!]!
+  subtotal: Int!
+  totalQuantity: Int!
+}
+
+type CartItem {
+  id: ID!
+  quantity: Int!
+  subtotal: Int!
+  variant: Variant!
+}
+
 type Category {
   id: ID!
   name: String!
@@ -45,8 +64,10 @@ type Image {
 }
 
 type Mutation {
+  addItemToCart(input: AddToCartInput!): Cart!
   addProductImage(input: AddImageInput!, productId: ID!): Image!
   addProductVariant(id: ID!, input: CreateVariantInput!): Variant!
+  clearCart: Cart!
   createCategory(input: CreateCategoryInput!): Category!
   createProduct(input: CreateProductInput!): Product!
   deleteCategory(id: ID!): Category!
@@ -55,6 +76,8 @@ type Mutation {
   deleteProductVariant(id: ID!): Variant!
   disableProduct(id: ID!): Product!
   enableProduct(id: ID!): Product!
+  removeItemFromCart(id: ID!): Cart!
+  updateCartItemQuantity(id: ID!, input: UpdateCartItemInput!): Cart!
   updateCategory(id: ID!, input: UpdateCategoryInput!): Category!
   updateProduct(id: ID!, input: UpdateProductInput!): Product!
   updateProductVariant(id: ID!, input: UpdateVariantInput!): Variant!
@@ -98,6 +121,7 @@ input ProductOptionInput {
 
 type Query {
   categories: [Category!]!
+  myCart: Cart!
   product(id: ID!): Product
   products(categoryId: ID, limit: Int! = 15, page: Int! = 1): PaginatedProducts!
 }
@@ -110,6 +134,10 @@ type SelectedOption {
 input SelectedOptionInput {
   name: String!
   value: String!
+}
+
+input UpdateCartItemInput {
+  quantity: Int!
 }
 
 input UpdateCategoryInput {

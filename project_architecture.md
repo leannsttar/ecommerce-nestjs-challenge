@@ -147,20 +147,15 @@ Table product_images {
   created_at timestamp
 }
 
-// Static container: created on first add-to-cart, never deleted
-Table carts {
-  id uuid [primary key]
-  user_id uuid [unique, ref: > users.id]
-}
 
 Table cart_items {
   id uuid [primary key]
-  cart_id uuid [ref: > carts.id]
+  user_id uuid [ref: > users.id]
   product_variant_id uuid [ref: > product_variants.id]
   quantity integer
 
   indexes {
-    (cart_id, product_variant_id) [unique]
+    (user_id, product_variant_id) [unique]
   }
 }
 
@@ -277,18 +272,6 @@ enum PaymentMethod {
 """
 Monetary amount with currency and formatted display
 """
-type MonetaryAmount {
-  """
-  Amount in cents (e.g., 2000 = $20.00)
-  """
-  amount: Int!
-  currency: String!
-  """
-  Human-readable formatted string (e.g., "$20.00")
-  """
-  formatted: String!
-}
-
 type Address {
   id: ID!
   addressLine: String!
@@ -313,9 +296,9 @@ type Category {
 
 type Product {
   id: ID!
-  title: String!
+  name: String!
   description: String!
-  category: Category!
+  categories: [Category!]!
   featuredImage: Image
   images: [Image!]!
   options: [ProductOption!]!
@@ -349,18 +332,15 @@ type ProductOption {
 
 type Variant {
   id: ID!
-  """
-  Computed from selected options (e.g., "Red / XL"). Resolved field, not stored in DB.
-  """
-  title: String!
+
   """
   Unique stock keeping unit
   """
   sku: String!
-  price: MonetaryAmount!
+  price: Int!
   stockQuantity: Int!
   product: Product!
-  image: Image
+  imageUrl: String
   """
   Selected options for this variant (e.g., Color: Red, Size: M)
   """
@@ -397,7 +377,7 @@ type CartItem {
   """
   Subtotal for this item (price × quantity)
   """
-  subtotal: MonetaryAmount!
+  subtotal: Int!
 }
 
 type Cart {
@@ -407,11 +387,11 @@ type Cart {
   """
   Sum of all item subtotals
   """
-  subtotal: MonetaryAmount!
+  subtotal: Int!
   """
   Final total (currently same as subtotal, placeholder for tax/discount)
   """
-  grandTotal: MonetaryAmount!
+  grandTotal: Int!
 }
 
 type Order {
@@ -420,15 +400,15 @@ type Order {
   """
   Sum of items before discount
   """
-  subtotal: MonetaryAmount!
+  subtotal: Int!
   """
   Discount amount applied (0 if none)
   """
-  discountAmount: MonetaryAmount!
+  discountAmount: Int!
   """
   Final total after discount
   """
-  totalAmount: MonetaryAmount!
+  totalAmount: Int!
   """
   Promo code used (from snapshot), null if none
   """
@@ -459,16 +439,16 @@ type OrderItem {
   """
   Unit price at time of purchase
   """
-  price: MonetaryAmount!
+  price: Int!
   """
   Total for this line item (price × quantity)
   """
-  total: MonetaryAmount!
+  total: Int!
 }
 
 type Payment {
   id: ID!
-  amount: MonetaryAmount!
+  amount: Int!
   paymentMethod: PaymentMethod!
   status: PaymentStatus!
   """
@@ -541,24 +521,22 @@ type PaginatedProducts {
   list of products in the current page(based on limit and offset).
   """
   items: [Product!]!
-
-  """
-  All products that match
-  Useful to calculate total pages
-  """
-  total: Int!
+  page: Int!
+  limit: Int!
+  totalItems: Int!
+  totalPages: Int!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
 }
 
 type PaginatedOrders {
-  """
-  list of orders in the current page
-  """
   items: [Order!]!
-
-  """
-  Orders that match with the filters and authorization
-  """
-  total: Int!
+  page: Int!
+  limit: Int!
+  totalItems: Int!
+  totalPages: Int!
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
 }
 
 # ─────────────────────────────────────────────────
@@ -890,6 +868,6 @@ type PaymentIntentResult {
   Stripe client secret for frontend confirmation
   """
   clientSecret: String!
-  amount: MonetaryAmount!
+  amount: Int!
 }
 ```
