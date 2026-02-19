@@ -16,6 +16,7 @@ import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { join } from 'path';
 import { ProductsModule } from './modules/products/products.module';
 import { CategoriesModule } from './modules/categories/categories.module';
+import { CartModule } from './modules/cart/cart.module';
 import { CaslModule } from './common/casl/casl.module';
 import { ApolloServerPluginLandingPageDisabled } from '@apollo/server/plugin/disabled';
 
@@ -76,6 +77,7 @@ import { ApolloServerPluginLandingPageDisabled } from '@apollo/server/plugin/dis
     }),
     ProductsModule,
     CategoriesModule,
+    CartModule,
     CaslModule,
   ],
   controllers: [AppController],
