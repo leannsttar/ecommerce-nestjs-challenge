@@ -220,7 +220,6 @@ Table promo_codes {
   is_active boolean [default: true]
   created_at timestamp
   updated_at timestamp
-  deleted_at timestamp
 }
 
 ```
@@ -509,7 +508,7 @@ type Query {
   ): PaginatedOrders!
 
   # --- MANAGER ONLY ---
-  allPromoCodes: [PromoCode!]!
+  promoCodes: [PromoCode!]!
 }
 
 # ─────────────────────────────────────────────────

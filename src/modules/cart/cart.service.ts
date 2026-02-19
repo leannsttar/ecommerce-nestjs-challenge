@@ -11,10 +11,6 @@ import { UpdateCartItemInput } from './dto/update-cart-item.input';
 export class CartService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /**
-   * Build a Cart object from the user's CartItems.
-   * The Cart is a virtual aggregate — there is no cart table in the DB.
-   */
   async getCart(userId: string) {
     const cartItems = await this.prisma.cartItem.findMany({
       where: { userId },
@@ -31,7 +27,7 @@ export class CartService {
     const subtotal = items.reduce((sum, i) => sum + i.subtotal, 0);
 
     return {
-      id: userId, // Cart ID is the user ID (virtual entity)
+      id: userId,
       items,
       totalQuantity,
       subtotal,
@@ -43,7 +39,6 @@ export class CartService {
   async addItem(userId: string, input: AddToCartInput) {
     const { variantId, quantity } = input;
 
-    //ensure it's buyable (active/not deleted)
     const variant = await this.prisma.productVariant.findFirst({
       where: { id: variantId, deletedAt: null, isActive: true },
     });
@@ -64,27 +59,17 @@ export class CartService {
     return this.getCart(userId);
   }
 
-  //Update the quantity of an existing cart item.
   async updateItemQuantity(
     userId: string,
     cartItemId: string,
     input: UpdateCartItemInput,
   ) {
-    // Use updateMany to handle ownership check in the query itself.
-    // If mismatch, count will be 0.
-    // Alternatively, try/catch around update with composite ID?
-    // But schema only has ID as primary key.
-    // We can use updateMany which returns count.
-
     const { count } = await this.prisma.cartItem.updateMany({
       where: { id: cartItemId, userId },
       data: { quantity: input.quantity },
     });
 
     if (count === 0) {
-      // Could be not found OR not owned.
-      // To be strictly correct with HTTP limits we might want 404 vs 403,
-      // but usually 404 is safer (hide existence).
       throw new NotFoundException(`Cart item not found`);
     }
 
