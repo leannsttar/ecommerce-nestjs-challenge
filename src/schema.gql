@@ -66,6 +66,12 @@ A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date
 """
 scalar DateTime
 
+type Favorite {
+  createdAt: DateTime!
+  id: ID!
+  variant: Variant!
+}
+
 type Image {
   id: ID!
   isMain: Boolean!
@@ -89,6 +95,7 @@ type Mutation {
   enableProduct(id: ID!): Product!
   enablePromoCode(id: ID!): PromoCode!
   removeItemFromCart(id: ID!): Cart!
+  toggleFavorite(variantId: ID!): Boolean!
   updateCartItemQuantity(id: ID!, input: UpdateCartItemInput!): Cart!
   updateCategory(id: ID!, input: UpdateCategoryInput!): Category!
   updateProduct(id: ID!, input: UpdateProductInput!): Product!
@@ -154,6 +161,7 @@ enum PromoType {
 type Query {
   categories: [Category!]!
   myCart: Cart!
+  myFavorites: [Favorite!]!
   product(id: ID!): Product
   products(categoryId: ID, limit: Int! = 15, page: Int! = 1): PaginatedProducts!
   promoCodes: [PromoCode!]!
@@ -202,6 +210,7 @@ input UpdateVariantInput {
 type Variant {
   id: ID!
   image: String
+  isFavorite: Boolean!
   price: Int!
   product: Product!
   selectedOptions: [SelectedOption!]!

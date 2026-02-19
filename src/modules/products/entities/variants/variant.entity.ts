@@ -24,4 +24,7 @@ export class Variant {
 
   @Field(() => [SelectedOption])
   selectedOptions: SelectedOption[];
+
+  @Field()
+  isFavorite: boolean;
 }

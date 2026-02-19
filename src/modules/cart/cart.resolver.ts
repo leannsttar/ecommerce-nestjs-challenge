@@ -61,10 +61,6 @@ export class CartResolver {
 
   // ─── Field Resolvers ──────────────────────────────────────────────────────────
 
-  /**
-   * The `variant` field on CartItem is eagerly loaded via `include` in the service,
-   * stored as `productVariant` in the Prisma result. We map it here.
-   */
   @ResolveField(() => Variant)
   variant(@Parent() cartItem: CartItem & { productVariant?: Variant }) {
     return cartItem.productVariant ?? cartItem.variant;
