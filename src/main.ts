@@ -4,6 +4,7 @@ import { ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
 import { ConfigService } from '@nestjs/config';
 import cookieParser from 'cookie-parser';
+import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -20,6 +21,8 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
 
+  app.useGlobalFilters(new GlobalExceptionFilter());
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true, // removes props not in dto
@@ -34,6 +37,5 @@ async function bootstrap() {
   const port = configService.getOrThrow<number>('app.port');
   await app.listen(port);
   console.log(`Application is running on: http://localhost:${port}/api`);
-
 }
 bootstrap();

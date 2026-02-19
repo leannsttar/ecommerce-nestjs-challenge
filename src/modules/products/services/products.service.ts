@@ -1,0 +1,177 @@
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
+import { PrismaService } from '../../../prisma/prisma.service';
+import { CreateProductInput } from '../dto/create-product.input';
+import { UpdateProductInput } from '../dto/update-product.input';
+import { AddImageInput } from '../dto/add-image.input';
+
+@Injectable()
+export class ProductsService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async findAll(
+    limit: number,
+    page: number,
+    categoryId?: string,
+    includeInactive: boolean = false,
+  ) {
+    const pageNumber = Math.max(1, page);
+    const offset = (pageNumber - 1) * limit;
+    const where = {
+      deletedAt: null,
+      isActive: includeInactive ? undefined : true,
+      ...(categoryId && {
+        categories: {
+          some: { categoryId },
+        },
+      }),
+    };
+
+    const [items, totalItems] = await this.prisma.$transaction([
+      this.prisma.product.findMany({
+        where,
+        take: limit,
+        skip: offset,
+        orderBy: { createdAt: 'desc' },
+      }),
+      this.prisma.product.count({ where }),
+    ]);
+
+    const totalPages = Math.ceil(totalItems / limit);
+
+    return {
+      items,
+      page: pageNumber,
+      limit,
+      totalItems,
+      totalPages,
+      hasNextPage: pageNumber < totalPages,
+      hasPreviousPage: pageNumber > 1,
+    };
+  }
+
+  async findOne(id: string) {
+    const product = await this.prisma.product.findFirst({
+      where: { id, deletedAt: null },
+    });
+    if (!product) {
+      throw new NotFoundException(`Product with ID ${id} not found`);
+    }
+    return product;
+  }
+
+  async create(input: CreateProductInput) {
+    const { images, featuredImage, categoryIds, options, ...productData } =
+      input;
+
+    // remove featuredImage from images array if exists
+    let galleryImages = images || [];
+    if (featuredImage && galleryImages.includes(featuredImage)) {
+      galleryImages = galleryImages.filter((key) => key !== featuredImage);
+    }
+
+    // Build array of images to save
+    const imagesToCreate: Array<{ url: string; isMain: boolean }> = [];
+
+    if (featuredImage) {
+      imagesToCreate.push({ url: featuredImage, isMain: true });
+    }
+
+    if (galleryImages.length > 0) {
+      imagesToCreate.push(
+        ...galleryImages.map((imageUrl) => ({ url: imageUrl, isMain: false })),
+      );
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const product = await tx.product.create({
+        data: {
+          ...productData,
+          categories: {
+            create: categoryIds.map((id) => ({
+              category: { connect: { id } },
+            })),
+          },
+          images:
+            imagesToCreate.length > 0 ? { create: imagesToCreate } : undefined,
+        },
+      });
+
+      await Promise.all(
+        options.map((option) =>
+          tx.productOption.create({
+            data: {
+              productId: product.id,
+              name: option.name,
+              values: {
+                create: option.values.map((value) => ({ value })),
+              },
+            },
+          }),
+        ),
+      );
+
+      return product;
+    });
+  }
+
+  async update(id: string, input: UpdateProductInput) {
+    const { categoryIds, ...updateData } = input;
+
+    return this.prisma.product.update({
+      where: { id },
+      data: {
+        ...updateData,
+        // Update categories if provided
+        categories: categoryIds
+          ? {
+              deleteMany: {}, // Remove all
+              create: categoryIds.map((catId) => ({
+                category: { connect: { id: catId } },
+              })),
+            }
+          : undefined,
+      },
+    });
+  }
+
+  async remove(id: string) {
+    return this.prisma.product.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
+  }
+
+  async disable(id: string) {
+    return this.prisma.product.update({
+      where: { id },
+      data: { isActive: false },
+    });
+  }
+
+  async enable(id: string) {
+    return this.prisma.product.update({
+      where: { id },
+      data: { isActive: true },
+    });
+  }
+
+  async addProductImage(productId: string, input: AddImageInput) {
+    return this.prisma.productImage.create({
+      data: {
+        productId,
+        url: input.imageUrl,
+        isMain: false,
+      },
+    });
+  }
+
+  async deleteProductImage(id: string) {
+    return this.prisma.productImage.delete({
+      where: { id },
+    });
+  }
+}

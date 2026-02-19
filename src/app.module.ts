@@ -2,20 +2,21 @@ import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { jwtConfig } from './common/config/jwt.config';
-import { appConfig } from './common/config/app.config';
-import { rateLimitConfig } from './common/config/rate-limit.config';
+import { jwtConfig } from './common/config/namespaces/jwt.config';
+import { appConfig } from './common/config/namespaces/app.config';
+import { rateLimitConfig } from './common/config/namespaces/rate-limit.config';
 import { validationSchema } from './common/config/validation.schema';
 import { APP_GUARD } from '@nestjs/core';
-import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { PrismaModule } from './prisma/prisma.module';
-import { AuthModule } from './auth/auth.module';
+import { AuthModule } from './modules/auth/auth.module';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { join } from 'path';
-import { ProductsModule } from './products/products.module';
-import { CategoriesModule } from './categories/categories.module';
+import { ProductsModule } from './modules/products/products.module';
+import { CategoriesModule } from './modules/categories/categories.module';
+import { CaslModule } from './common/casl/casl.module';
 import { ApolloServerPluginLandingPageDisabled } from '@apollo/server/plugin/disabled';
 
 @Module({
@@ -60,9 +61,22 @@ import { ApolloServerPluginLandingPageDisabled } from '@apollo/server/plugin/dis
       plugins: [ApolloServerPluginLandingPageDisabled()],
       csrfPrevention: false, //problems with testing request
       context: ({ req, res }) => ({ req, res }), //req.user accessible to resolvers/guards
+      formatError: (error) => {
+        return {
+          message: error.message,
+          path: error.path,
+          locations: error.locations,
+          extensions: {
+            code: error.extensions?.code || 'INTERNAL_SERVER_ERROR',
+            statusCode: error.extensions?.statusCode || 500,
+            timestamp: new Date().toISOString(),
+          },
+        };
+      },
     }),
     ProductsModule,
     CategoriesModule,
+    CaslModule,
   ],
   controllers: [AppController],
   providers: [
@@ -74,9 +88,8 @@ import { ApolloServerPluginLandingPageDisabled } from '@apollo/server/plugin/dis
     // {
     //   provide: APP_GUARD,
     //   useClass: ThrottlerGuard,
-    // }, 
+    // },
     // Disabled for now, problems with graphql playground
-    // Only working in reset and forgot password routes
   ],
 })
 export class AppModule {}
