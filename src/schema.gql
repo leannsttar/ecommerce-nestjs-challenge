@@ -94,6 +94,11 @@ type Favorite {
   variant: Variant!
 }
 
+input GeneratePresignedUrlInput {
+  contentType: String!
+  fileName: String!
+}
+
 type Image {
   id: ID!
   isMain: Boolean!
@@ -130,6 +135,7 @@ type Mutation {
   dispatchOrders(input: DispatchOrdersInput!): AssignmentResult!
   enableProduct(id: ID!): Product!
   enablePromoCode(id: ID!): PromoCode!
+  generatePresignedUrl(input: GeneratePresignedUrlInput!): PresignedUrlResponse!
 
   """Delivery person marks a single assigned SHIPPED order as DELIVERED."""
   markOrderAsDelivered(orderId: ID!): Order!
@@ -229,6 +235,12 @@ enum PaymentStatus {
   PENDING
   REFUNDED
   SUCCEEDED
+}
+
+type PresignedUrlResponse {
+  key: String!
+  presignedUrl: String!
+  publicUrl: String!
 }
 
 type Product {

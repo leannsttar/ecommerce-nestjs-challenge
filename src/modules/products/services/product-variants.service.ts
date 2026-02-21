@@ -8,6 +8,7 @@ import { PrismaService } from '../../../prisma/prisma.service';
 import { CreateVariantInput } from '../dto/variants/create-variant.input';
 import { UpdateVariantInput } from '../dto/variants/update-variant.input';
 import { StripeService } from '../../stripe/stripe.service';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class ProductVariantsService {
@@ -16,6 +17,7 @@ export class ProductVariantsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly stripe: StripeService,
+    private readonly configService: ConfigService,
   ) {}
 
   async addVariant(productId: string, input: CreateVariantInput) {
@@ -147,41 +149,63 @@ export class ProductVariantsService {
     });
 
     /**
-     * 📖 STRIPE SYNC: Create Price and Payment Link per Variant
-     *
-     * A Price is linked to the Stripe Product (via stripeProductId).
-     * A Payment Link wraps the Price into a shareable checkout URL.
-     *
-     * If the product has no stripeProductId yet (e.g., Stripe was down during
-     * product creation), we skip Stripe sync gracefully.
+     * 📖 STRIPE SYNC: 1 Variant = 1 Stripe Product
+     * We create a Stripe Product specific to this variant so it can have
+     * its own unique image and SKU at checkout.
      */
-    if (productResult?.stripeProductId) {
-      try {
-        const stripePrice = await this.stripe.createPrice({
-          stripeProductId: productResult.stripeProductId,
-          unitAmount: variantResult.price,
-          metadata: { variantId: variantResult.id },
-        });
+    try {
+      const bucket = this.configService.getOrThrow('s3.bucket');
+      const region = this.configService.getOrThrow('s3.region');
 
-        const stripePaymentLink = await this.stripe.createPaymentLink({
-          stripePriceId: stripePrice.id,
-          variantId: variantResult.id,
-        });
-
-        // Update the variant record with Stripe IDs
-        await this.prisma.productVariant.update({
-          where: { id: variantResult.id },
-          data: {
-            stripePriceId: stripePrice.id,
-            stripePaymentLinkId: stripePaymentLink.id,
-            paymentLinkUrl: stripePaymentLink.url,
-          },
-        });
-      } catch (err) {
-        this.logger.error(
-          `Failed to sync variant ${variantResult.id} with Stripe: ${err.message}`,
-        );
+      let imageUrls: string[] | undefined;
+      // Reconstruct full S3 URL for Stripe if an image key exists
+      if (variantResult.image) {
+        if (variantResult.image.startsWith('http')) {
+          imageUrls = [variantResult.image];
+        } else {
+          imageUrls = [
+            `https://${bucket}.s3.${region}.amazonaws.com/${variantResult.image}`,
+          ];
+        }
       }
+
+      const variantName = `${productResult?.name} - ${input.selectedOptions
+        .map((o) => o.value)
+        .join(' / ')}`;
+
+      // Step 1: Create Variant Stripe Product
+      const stripeProduct = await this.stripe.createProduct({
+        name: variantName,
+        images: imageUrls,
+      });
+
+      // Step 2: Create Price
+      const stripePrice = await this.stripe.createPrice({
+        stripeProductId: stripeProduct.id,
+        unitAmount: variantResult.price,
+        metadata: { variantId: variantResult.id },
+      });
+
+      // Step 3: Create Payment Link
+      const stripePaymentLink = await this.stripe.createPaymentLink({
+        stripePriceId: stripePrice.id,
+        variantId: variantResult.id,
+      });
+
+      // Step 4: Update the variant record with Stripe IDs
+      await this.prisma.productVariant.update({
+        where: { id: variantResult.id },
+        data: {
+          stripeProductId: stripeProduct.id,
+          stripePriceId: stripePrice.id,
+          stripePaymentLinkId: stripePaymentLink.id,
+          paymentLinkUrl: stripePaymentLink.url,
+        },
+      });
+    } catch (err) {
+      this.logger.error(
+        `Failed to sync variant ${variantResult.id} with Stripe: ${err.message}`,
+      );
     }
 
     return this.prisma.productVariant.findUnique({
@@ -217,45 +241,84 @@ export class ProductVariantsService {
       },
     });
 
-    // Stripe sync: if price changed, rotate Price and Payment Link
-    const priceChanged =
-      input.price !== undefined && input.price !== existing.price;
+    // Stripe sync:
+    // 1. If sku or image changed, update Stripe Product
+    // 2. If price changed, rotate Price and Payment Link
 
-    if (priceChanged && existing.product.stripeProductId) {
+    if (existing.stripeProductId) {
       try {
-        // Step 1: Deactivate old Price and Payment Link
-        if (existing.stripePriceId) {
-          await this.stripe.deactivatePrice(existing.stripePriceId);
+        const skuChanged =
+          input.sku !== undefined && input.sku !== existing.sku;
+        const imageChanged =
+          input.image !== undefined && input.image !== existing.image;
+
+        if (skuChanged || imageChanged) {
+          let imageUrls: string[] | undefined;
+
+          if (updated.image) {
+            const bucket = this.configService.getOrThrow('s3.bucket');
+            const region = this.configService.getOrThrow('s3.region');
+
+            if (updated.image.startsWith('http')) {
+              imageUrls = [updated.image];
+            } else {
+              imageUrls = [
+                `https://${bucket}.s3.${region}.amazonaws.com/${updated.image}`,
+              ];
+            }
+          }
+
+          // Generate name using new SKU if changed, or keep it generic
+          const variantName = updated.sku
+            ? `Variant - ${updated.sku}`
+            : `Variant`;
+
+          await this.stripe.updateProduct(existing.stripeProductId, {
+            name: skuChanged ? variantName : undefined, // Only update name if sku changed to not wipe out earlier generated names
+            images: imageChanged ? imageUrls || [] : undefined,
+          });
         }
-        if (existing.stripePaymentLinkId) {
-          await this.stripe.deactivatePaymentLink(existing.stripePaymentLinkId);
-        }
 
-        // Step 2: Create new Price
-        const newPrice = await this.stripe.createPrice({
-          stripeProductId: existing.product.stripeProductId,
-          unitAmount: updated.price,
-          metadata: { variantId },
-        });
+        const priceChanged =
+          input.price !== undefined && input.price !== existing.price;
 
-        // Step 3: Create new Payment Link
-        const newPaymentLink = await this.stripe.createPaymentLink({
-          stripePriceId: newPrice.id,
-          variantId,
-        });
+        if (priceChanged) {
+          // Step 1: Deactivate old Price and Payment Link
+          if (existing.stripePriceId) {
+            await this.stripe.deactivatePrice(existing.stripePriceId);
+          }
+          if (existing.stripePaymentLinkId) {
+            await this.stripe.deactivatePaymentLink(
+              existing.stripePaymentLinkId,
+            );
+          }
 
-        // Step 4: Update DB with new Stripe IDs
-        await this.prisma.productVariant.update({
-          where: { id: variantId },
-          data: {
+          // Step 2: Create new Price
+          const newPrice = await this.stripe.createPrice({
+            stripeProductId: existing.stripeProductId,
+            unitAmount: updated.price,
+            metadata: { variantId },
+          });
+
+          // Step 3: Create new Payment Link
+          const newPaymentLink = await this.stripe.createPaymentLink({
             stripePriceId: newPrice.id,
-            stripePaymentLinkId: newPaymentLink.id,
-            paymentLinkUrl: newPaymentLink.url,
-          },
-        });
+            variantId,
+          });
+
+          // Step 4: Update DB with new Stripe IDs
+          await this.prisma.productVariant.update({
+            where: { id: variantId },
+            data: {
+              stripePriceId: newPrice.id,
+              stripePaymentLinkId: newPaymentLink.id,
+              paymentLinkUrl: newPaymentLink.url,
+            },
+          });
+        }
       } catch (err) {
         this.logger.error(
-          `Failed to rotate Stripe price for variant ${variantId}: ${err.message}`,
+          `Failed to sync variant update ${variantId} with Stripe: ${err.message}`,
         );
       }
     }
@@ -293,7 +356,16 @@ export class ProductVariantsService {
       );
     }
 
-    // Deactivate Stripe Price and Payment Link before soft-deleting
+    // Deactivate Stripe Product, Price and Payment Link before soft-deleting
+    if (variant.stripeProductId) {
+      try {
+        await this.stripe.deactivateProduct(variant.stripeProductId);
+      } catch (err) {
+        this.logger.warn(
+          `Failed to deactivate Stripe product ${variant.stripeProductId}: ${err.message}`,
+        );
+      }
+    }
     if (variant.stripePriceId) {
       try {
         await this.stripe.deactivatePrice(variant.stripePriceId);

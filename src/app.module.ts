@@ -5,6 +5,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { jwtConfig } from './common/config/namespaces/jwt.config';
 import { appConfig } from './common/config/namespaces/app.config';
 import { rateLimitConfig } from './common/config/namespaces/rate-limit.config';
+import { s3Config } from './common/config/namespaces/s3.config';
 import { validationSchema } from './common/config/validation.schema';
 import { APP_GUARD } from '@nestjs/core';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
@@ -24,13 +25,14 @@ import { FavoritesModule } from './modules/favorites/favorites.module';
 import { StripeModule } from './modules/stripe/stripe.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { UploadsModule } from './modules/uploads/uploads.module';
 
 @Module({
   imports: [
     // global config with validation
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [jwtConfig, appConfig, rateLimitConfig],
+      load: [jwtConfig, appConfig, rateLimitConfig, s3Config],
       validationSchema,
       validationOptions: {
         abortEarly: true,
@@ -88,6 +90,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     FavoritesModule,
     StripeModule,
     OrdersModule,
+    UploadsModule,
     CaslModule,
   ],
   controllers: [AppController],
