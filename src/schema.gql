@@ -290,7 +290,7 @@ type Query {
   """
   orders(filter: OrderFilterInput, limit: Int! = 20, offset: Int! = 0): PaginatedOrders!
   product(id: ID!): Product
-  products(categoryId: ID, limit: Int! = 15, page: Int! = 1): PaginatedProducts!
+  products(categoryId: ID, limit: Int! = 15, offset: Int! = 0): PaginatedProducts!
   promoCodes: [PromoCode!]!
 }
 

@@ -49,11 +49,11 @@ export class ProductsResolver {
   @Query(() => PaginatedProducts, { name: 'products' })
   findAll(
     @Args('limit', { type: () => Int, defaultValue: 15 }) limit: number,
-    @Args('page', { type: () => Int, defaultValue: 1 }) page: number,
+    @Args('offset', { type: () => Int, defaultValue: 0 }) offset: number,
     @Args('categoryId', { type: () => ID, nullable: true })
     categoryId?: string,
   ) {
-    return this.productsService.findAll(limit, page, categoryId);
+    return this.productsService.findAll(limit, offset, categoryId);
   }
 
   @Public()

@@ -22,12 +22,11 @@ export class ProductsService {
 
   async findAll(
     limit: number,
-    page: number,
+    offset: number,
     categoryId?: string,
     includeInactive: boolean = false,
   ) {
-    const pageNumber = Math.max(1, page);
-    const offset = (pageNumber - 1) * limit;
+    const pageNumber = Math.max(1, Math.floor(offset / limit) + 1);
     const where = {
       deletedAt: null,
       isActive: includeInactive ? undefined : true,
