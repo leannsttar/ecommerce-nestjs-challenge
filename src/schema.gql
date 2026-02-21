@@ -1,0 +1,374 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+input AddImageInput {
+  imageUrl: String!
+}
+
+input AddToCartInput {
+  quantity: Int! = 1
+  variantId: ID!
+}
+
+input AssignOrdersInput {
+  deliveryPersonId: ID!
+  orderIds: [ID!]!
+}
+
+type AssignmentResult {
+  """Number of orders successfully updated."""
+  count: Int!
+}
+
+type Cart {
+  id: ID!
+  items: [CartItem!]!
+  subtotal: Int!
+  totalQuantity: Int!
+  userId: String!
+}
+
+type CartItem {
+  id: ID!
+  quantity: Int!
+  subtotal: Int!
+  variant: Variant!
+}
+
+type Category {
+  id: ID!
+  name: String!
+  products: [Product!]
+}
+
+input CheckoutInput {
+  currency: String
+  promoCode: String
+  shippingAddress: ShippingAddressInput!
+}
+
+input CreateCategoryInput {
+  name: String!
+}
+
+input CreateProductInput {
+  categoryIds: [ID!]!
+  description: String!
+  featuredImage: String!
+  images: [String!]
+  name: String!
+  options: [ProductOptionInput!]!
+}
+
+input CreatePromoCodeInput {
+  code: String!
+  expiresAt: String!
+  maxDiscountAmount: Int
+  minPurchase: Int
+  type: PromoType!
+  usageLimit: Int!
+  value: Int!
+}
+
+input CreateVariantInput {
+  image: String
+  price: Int!
+  selectedOptions: [SelectedOptionInput!]!
+  sku: String!
+  stockQuantity: Int!
+}
+
+"""
+A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date-time format.
+"""
+scalar DateTime
+
+input DispatchOrdersInput {
+  orderIds: [ID!]!
+}
+
+type Favorite {
+  createdAt: DateTime!
+  id: ID!
+  variant: Variant!
+}
+
+input GeneratePresignedUrlInput {
+  contentType: String!
+  fileName: String!
+}
+
+type Image {
+  id: ID!
+  isMain: Boolean!
+  url: String!
+}
+
+type Mutation {
+  addItemToCart(input: AddToCartInput!): Cart!
+  addProductImage(input: AddImageInput!, productId: ID!): Image!
+  addProductVariant(id: ID!, input: CreateVariantInput!): Variant!
+
+  """
+  Manager assigns PAID orders to a delivery person, moving them to PROCESSING status.
+  """
+  assignOrdersToDelivery(input: AssignOrdersInput!): AssignmentResult!
+
+  """Cancel an order."""
+  cancelOrder(id: ID!): Order!
+
+  """Create order from cart and return Stripe PaymentIntent client secret."""
+  checkout(input: CheckoutInput!): PaymentIntentResult!
+  clearCart: Cart!
+  createCategory(input: CreateCategoryInput!): Category!
+  createProduct(input: CreateProductInput!): Product!
+  createPromoCode(input: CreatePromoCodeInput!): PromoCode!
+  deleteCategory(id: ID!): Category!
+  deleteProduct(id: ID!): Product!
+  deleteProductImage(id: ID!): Image!
+  deleteProductVariant(id: ID!): Variant!
+  disableProduct(id: ID!): Product!
+  disablePromoCode(id: ID!): PromoCode!
+
+  """Manager dispatches PROCESSING orders, moving them to SHIPPED status."""
+  dispatchOrders(input: DispatchOrdersInput!): AssignmentResult!
+  enableProduct(id: ID!): Product!
+  enablePromoCode(id: ID!): PromoCode!
+  generatePresignedUrl(input: GeneratePresignedUrlInput!): PresignedUrlResponse!
+
+  """Delivery person marks a single assigned SHIPPED order as DELIVERED."""
+  markOrderAsDelivered(orderId: ID!): Order!
+  removeItemFromCart(id: ID!): Cart!
+  toggleFavorite(variantId: ID!): Boolean!
+  updateCartItemQuantity(id: ID!, input: UpdateCartItemInput!): Cart!
+  updateCategory(id: ID!, input: UpdateCategoryInput!): Category!
+  updateProduct(id: ID!, input: UpdateProductInput!): Product!
+  updateProductVariant(id: ID!, input: UpdateVariantInput!): Variant!
+  updatePromoCode(id: ID!, input: UpdatePromoCodeInput!): PromoCode!
+}
+
+type Order {
+  createdAt: DateTime!
+  deliveryPersonId: String
+  discountAmount: Int!
+  id: ID!
+  items: [OrderItem!]!
+  payments: [Payment!]!
+  promoCode: String
+  shippingAddress: ShippingAddress!
+  status: OrderStatus!
+  subtotal: Int!
+  totalAmount: Int!
+  userId: String
+}
+
+input OrderFilterInput {
+  fromDate: DateTime
+  maxAmount: Int
+  minAmount: Int
+  status: OrderStatus
+  toDate: DateTime
+}
+
+type OrderItem {
+  id: ID!
+  price: Int!
+  productTitle: String!
+  quantity: Int!
+  total: Int!
+  variantTitle: String!
+}
+
+enum OrderStatus {
+  CANCELLED
+  DELIVERED
+  PAID
+  PENDING
+  PROCESSING
+  REFUNDED
+  SHIPPED
+}
+
+type PaginatedOrders {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  items: [Order!]!
+  limit: Int!
+  page: Int!
+  totalItems: Int!
+  totalPages: Int!
+}
+
+type PaginatedProducts {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  items: [Product!]!
+  limit: Int!
+  page: Int!
+  totalItems: Int!
+  totalPages: Int!
+}
+
+type Payment {
+  amount: Int!
+  createdAt: DateTime!
+  id: ID!
+  paymentMethod: PaymentMethod!
+  status: PaymentStatus!
+}
+
+type PaymentIntentResult {
+  """The final charged amount in cents"""
+  amount: Int!
+  clientSecret: String!
+  orderId: ID!
+}
+
+enum PaymentMethod {
+  PAYMENT_INTENT
+  PAYMENT_LINK
+}
+
+enum PaymentStatus {
+  FAILED
+  PENDING
+  REFUNDED
+  SUCCEEDED
+}
+
+type PresignedUrlResponse {
+  key: String!
+  presignedUrl: String!
+  publicUrl: String!
+}
+
+type Product {
+  categories: [Category!]!
+  createdAt: DateTime
+  deletedAt: DateTime
+  description: String!
+  featuredImage: Image
+  id: ID!
+  images: [Image!]!
+  isActive: Boolean
+  name: String!
+  options: [ProductOption!]!
+  updatedAt: DateTime
+  variants: [Variant!]!
+}
+
+type ProductOption {
+  id: ID!
+  name: String!
+  values: [String!]!
+}
+
+input ProductOptionInput {
+  name: String!
+  values: [String!]!
+}
+
+type PromoCode {
+  code: String!
+  createdAt: DateTime!
+  expiresAt: DateTime!
+  id: ID!
+  isActive: Boolean!
+  maxDiscountAmount: Int
+  minPurchase: Int
+  type: PromoType!
+  updatedAt: DateTime!
+  usageCount: Int!
+  usageLimit: Int!
+  value: Int!
+}
+
+enum PromoType {
+  FIXED_AMOUNT
+  PERCENTAGE
+}
+
+type Query {
+  categories: [Category!]!
+  myCart: Cart!
+  myFavorites: [Favorite!]!
+
+  """Get a specific order by ID."""
+  order(id: ID!): Order!
+
+  """
+  Get paginated orders. Clients see own, Managers see all, Delivery sees shipped assigned.
+  """
+  orders(filter: OrderFilterInput, limit: Int! = 20, offset: Int! = 0): PaginatedOrders!
+  product(id: ID!): Product
+  products(categoryId: ID, limit: Int! = 15, offset: Int! = 0): PaginatedProducts!
+  promoCodes: [PromoCode!]!
+}
+
+type SelectedOption {
+  name: String!
+  value: String!
+}
+
+input SelectedOptionInput {
+  name: String!
+  value: String!
+}
+
+type ShippingAddress {
+  addressLine: String!
+  city: String!
+  country: String!
+  postalCode: String!
+}
+
+input ShippingAddressInput {
+  addressLine: String!
+  city: String!
+  country: String!
+  postalCode: String!
+}
+
+input UpdateCartItemInput {
+  quantity: Int!
+}
+
+input UpdateCategoryInput {
+  name: String
+}
+
+input UpdateProductInput {
+  categoryIds: [ID!]
+  description: String
+  name: String
+}
+
+input UpdatePromoCodeInput {
+  code: String
+  expiresAt: String
+  maxDiscountAmount: Int
+  minPurchase: Int
+  type: PromoType
+  usageLimit: Int
+  value: Int
+}
+
+input UpdateVariantInput {
+  image: String
+  price: Int
+  sku: String
+  stockQuantity: Int
+}
+
+type Variant {
+  id: ID!
+  image: String
+  isFavorite: Boolean!
+  paymentLinkUrl: String
+  price: Int!
+  product: Product!
+  selectedOptions: [SelectedOption!]!
+  sku: String!
+  stockQuantity: Int!
+}
