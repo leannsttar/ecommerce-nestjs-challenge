@@ -22,14 +22,17 @@ export const validationSchema = Joi.object({
   SENDGRID_API_KEY: Joi.string().required(),
   SENDGRID_FROM_EMAIL: Joi.string().email().required(),
 
+  //stripe
+  STRIPE_SECRET_KEY: Joi.string().required(),
+  STRIPE_WEBHOOK_SECRET: Joi.string().required(),
+
   //rate limit
   THROTTLE_SHORT_TTL: Joi.number().default(1000),
   THROTTLE_SHORT_LIMIT: Joi.number().default(3),
-  
+
   THROTTLE_MEDIUM_TTL: Joi.number().default(10000),
   THROTTLE_MEDIUM_LIMIT: Joi.number().default(20),
-  
+
   THROTTLE_LONG_TTL: Joi.number().default(60000),
   THROTTLE_LONG_LIMIT: Joi.number().default(100),
-
 });

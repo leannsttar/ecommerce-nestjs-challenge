@@ -21,6 +21,9 @@ import { CaslModule } from './common/casl/casl.module';
 import { ApolloServerPluginLandingPageDisabled } from '@apollo/server/plugin/disabled';
 import { PromoModule } from './modules/promo/promo.module';
 import { FavoritesModule } from './modules/favorites/favorites.module';
+import { StripeModule } from './modules/stripe/stripe.module';
+import { OrdersModule } from './modules/orders/orders.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -34,6 +37,7 @@ import { FavoritesModule } from './modules/favorites/favorites.module';
         allowUnknown: true,
       },
     }),
+    ScheduleModule.forRoot(),
     PrismaModule,
     AuthModule,
     ThrottlerModule.forRootAsync({
@@ -82,6 +86,8 @@ import { FavoritesModule } from './modules/favorites/favorites.module';
     CartModule,
     PromoModule,
     FavoritesModule,
+    StripeModule,
+    OrdersModule,
     CaslModule,
   ],
   controllers: [AppController],

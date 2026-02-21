@@ -37,6 +37,9 @@ export class PromoCode {
   @Field(() => Int, { nullable: true })
   minPurchase: number | null;
 
+  @Field(() => Int, { nullable: true })
+  maxDiscountAmount: number | null;
+
   @Field()
   isActive: boolean;
 

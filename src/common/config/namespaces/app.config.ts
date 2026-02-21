@@ -9,4 +9,7 @@ export const appConfig = registerAs('app', () => ({
 
   sendgridApiKey: process.env.SENDGRID_API_KEY,
   sendgridFromEmail: process.env.SENDGRID_FROM_EMAIL,
+
+  stripeSecretKey: process.env.STRIPE_SECRET_KEY,
+  stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
 }));

@@ -12,7 +12,6 @@ export class CartItem {
   @Field(() => Variant)
   variant: Variant;
 
-  //Computed field: price * quantity
   @Field(() => Int)
   subtotal: number;
 }

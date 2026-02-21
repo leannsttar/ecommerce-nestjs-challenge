@@ -2,24 +2,31 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Logger,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { CreateProductInput } from '../dto/create-product.input';
 import { UpdateProductInput } from '../dto/update-product.input';
 import { AddImageInput } from '../dto/add-image.input';
+import { StripeService } from '../../stripe/stripe.service';
 
 @Injectable()
 export class ProductsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(ProductsService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly stripe: StripeService,
+  ) {}
 
   async findAll(
     limit: number,
-    page: number,
+    offset: number,
     categoryId?: string,
     includeInactive: boolean = false,
   ) {
-    const pageNumber = Math.max(1, page);
-    const offset = (pageNumber - 1) * limit;
+    const pageNumber = Math.max(1, Math.floor(offset / limit) + 1);
     const where = {
       deletedAt: null,
       isActive: includeInactive ? undefined : true,
@@ -86,10 +93,32 @@ export class ProductsService {
       );
     }
 
+    /**
+     * 📖 STRIPE SYNC: Create Stripe Product first
+     * We create the Stripe Product BEFORE saving to the DB.
+     * If Stripe fails, we don't create the DB record either (no orphans).
+     * If the DB insert fails after Stripe creation, we have an orphan Stripe
+     * Product, which is acceptable — it stays inactive and won't affect billing.
+     */
+    let stripeProductId: string | undefined;
+    try {
+      const stripeProduct = await this.stripe.createProduct({
+        name: productData.name,
+        description: productData.description,
+      });
+      stripeProductId = stripeProduct.id;
+    } catch (err) {
+      this.logger.error(`Failed to create Stripe product: ${err.message}`);
+      throw new InternalServerErrorException(
+        'Could not create product in Stripe',
+      );
+    }
+
     return this.prisma.$transaction(async (tx) => {
       const product = await tx.product.create({
         data: {
           ...productData,
+          stripeProductId,
           categories: {
             create: categoryIds.map((id) => ({
               category: { connect: { id } },
@@ -138,14 +167,58 @@ export class ProductsService {
     });
   }
 
+  /**
+   * Soft delete the product. Also deactivates it on Stripe.
+   *
+   * 📖 WHY DEACTIVATE ON STRIPE?
+   * If we just delete it in our DB but leave it active in Stripe, the
+   * payment links for its variants would still work! Customers could still
+   * check out for a product that no longer exists in our system.
+   */
   async remove(id: string) {
+    const product = await this.prisma.product.findFirst({
+      where: { id, deletedAt: null },
+    });
+    if (!product) throw new NotFoundException(`Product ${id} not found`);
+
+    if (product.stripeProductId) {
+      try {
+        await this.stripe.deactivateProduct(product.stripeProductId);
+      } catch (err) {
+        this.logger.warn(
+          `Failed to deactivate Stripe product ${product.stripeProductId}: ${err.message}`,
+        );
+      }
+    }
+
     return this.prisma.product.update({
       where: { id },
       data: { deletedAt: new Date() },
     });
   }
 
+  /**
+   * Disable the product (sets isActive=false). Also deactivates on Stripe.
+   */
   async disable(id: string) {
+    const product = await this.prisma.product.findFirst({
+      where: { id, deletedAt: null },
+    });
+
+    if (!product) {
+      throw new NotFoundException(`Product ${id} not found`);
+    }
+
+    if (product.stripeProductId) {
+      try {
+        await this.stripe.deactivateProduct(product.stripeProductId);
+      } catch (err) {
+        this.logger.warn(
+          `Failed to deactivate Stripe product ${product.stripeProductId}: ${err.message}`,
+        );
+      }
+    }
+
     return this.prisma.product.update({
       where: { id },
       data: { isActive: false },

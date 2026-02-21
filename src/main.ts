@@ -7,7 +7,9 @@ import cookieParser from 'cookie-parser';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    rawBody: true, // Enables req.rawBody for webhook signature verification
+  });
   const configService = app.get(ConfigService);
 
   app.use(helmet());
@@ -35,7 +37,7 @@ async function bootstrap() {
   );
 
   const port = configService.getOrThrow<number>('app.port');
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
   console.log(`Application is running on: http://localhost:${port}/api`);
 }
 bootstrap();

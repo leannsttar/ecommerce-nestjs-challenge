@@ -90,6 +90,9 @@ Table products {
   name varchar
   description text
   is_active bool [default: true]
+
+  stripe_product_id varchar [null]
+
   created_at timestamp
   updated_at timestamp
   deleted_at timestamp
@@ -107,8 +110,14 @@ Table product_variants {
   id uuid [primary key]
   product_id uuid [ref: > products.id]
   sku varchar [unique]
+  image_url text [null]
   price int [note: 'Price in cents']
   stock_quantity integer
+
+  stripe_price_id varchar [null]
+  stripe_payment_link_id text [null]
+  payment_link_url text [null]
+
   created_at timestamp
   updated_at timestamp
   deleted_at timestamp
@@ -141,7 +150,6 @@ Table product_variant_values {
 Table product_images {
   id uuid [primary key]
   product_id uuid [ref: > products.id, null]
-  product_variant_id uuid [ref: > product_variants.id, null]
   is_main boolean
   key text
   created_at timestamp
@@ -161,10 +169,15 @@ Table cart_items {
 
 Table orders {
   id uuid [primary key]
-  user_id uuid [ref: > users.id]
+  user_id uuid [ref: > users.id, null]
+
+  guest_email varchar [null]
+
   status order_status [default: 'pending']
   delivery_person_id uuid [ref: > users.id, null]
+
   shipping_address_snapshot jsonb
+
   promo_code_id uuid [ref: > promo_codes.id, null]
   promo_snapshot jsonb [note: 'stores {code, value, type}', null]
   subtotal int [note: 'Sum of items before discount']
@@ -187,14 +200,20 @@ Table order_items {
 Table payments {
   id uuid [primary key]
   order_id uuid [ref: > orders.id]
-  stripe_payment_id text
+
+  stripe_payment_intent_id text [null]
   stripe_session_id text [null]
+  stripe_payment_link_id text [null]
+
   payment_method payment_method
   status payment_status [default: 'pending']
-  receipt_url text
+
+  receipt_url text [null]
+
   currency varchar
   amount int
-  payment_date timestamp
+
+  payment_date timestamp [null]
 }
 
 Table favorites {
@@ -217,11 +236,11 @@ Table promo_codes {
   usage_limit int
   usage_count int [default: 0]
   min_purchase int [null]
+  max_discount_amount int [null]
   is_active boolean [default: true]
   created_at timestamp
   updated_at timestamp
 }
-
 ```
 
 ## 📝 GraphQL Schema (SDL)
@@ -349,6 +368,8 @@ type Variant {
   Always false for unauthenticated requests.
   """
   isFavorite: Boolean!
+
+  paymentLinkUrl: String
 }
 
 type SelectedOption {
@@ -471,6 +492,7 @@ type PromoCode {
   usageLimit: Int!
   usageCount: Int!
   minPurchase: Int
+  max_discount_amount: Int
   isActive: Boolean!
   createdAt: DateTime!
   updatedAt: DateTime!
@@ -483,7 +505,7 @@ type PromoCode {
 type Query {
   # --- PUBLIC ---
   product(id: ID!): Product
-  products(limit: Int = 15, offset: Int = 0, categoryId: ID): PaginatedProducts!
+  products(limit: Int = 15, page: Int = 0, categoryId: ID): PaginatedProducts!
 
   categories: [Category!]!
 
@@ -509,7 +531,7 @@ type Query {
   orders(
     filter: OrderFilterInput
     limit: Int = 20
-    offset: Int = 0
+    page: Int = 0
   ): PaginatedOrders!
 
   # --- MANAGER ONLY ---

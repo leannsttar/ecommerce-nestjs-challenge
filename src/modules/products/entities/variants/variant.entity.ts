@@ -27,4 +27,7 @@ export class Variant {
 
   @Field()
   isFavorite: boolean;
+
+  @Field({ nullable: true })
+  paymentLinkUrl?: string;
 }
