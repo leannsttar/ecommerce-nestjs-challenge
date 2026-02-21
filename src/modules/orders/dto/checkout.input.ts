@@ -4,6 +4,7 @@ import {
   IsString,
   IsNotEmpty,
   IsOptional,
+  MaxLength,
   ValidateNested,
 } from 'class-validator';
 
@@ -41,4 +42,11 @@ export class CheckoutInput {
   @IsOptional()
   @IsString()
   currency?: string;
+
+  /** Optional promo code to apply a discount at checkout */
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  promoCode?: string;
 }

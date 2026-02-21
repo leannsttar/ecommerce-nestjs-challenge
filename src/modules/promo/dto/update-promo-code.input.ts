@@ -42,10 +42,18 @@ export class UpdatePromoCodeInput {
   @Min(1)
   usageLimit?: number;
 
-  //Send null to remove the minimum purchase requirement
   @Field(() => Int, { nullable: true })
   @IsOptional()
   @IsInt()
   @Min(0)
   minPurchase?: number | null;
+
+  /**
+   * Only meaningful for PERCENTAGE type codes.
+   */
+  @Field(() => Int, { nullable: true })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  maxDiscountAmount?: number | null;
 }

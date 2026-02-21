@@ -44,6 +44,7 @@ type Category {
 
 input CheckoutInput {
   currency: String
+  promoCode: String
   shippingAddress: ShippingAddressInput!
 }
 
@@ -63,6 +64,7 @@ input CreateProductInput {
 input CreatePromoCodeInput {
   code: String!
   expiresAt: String!
+  maxDiscountAmount: Int
   minPurchase: Int
   type: PromoType!
   usageLimit: Int!
@@ -261,6 +263,7 @@ type PromoCode {
   expiresAt: DateTime!
   id: ID!
   isActive: Boolean!
+  maxDiscountAmount: Int
   minPurchase: Int
   type: PromoType!
   updatedAt: DateTime!
@@ -332,6 +335,7 @@ input UpdateProductInput {
 input UpdatePromoCodeInput {
   code: String
   expiresAt: String
+  maxDiscountAmount: Int
   minPurchase: Int
   type: PromoType
   usageLimit: Int

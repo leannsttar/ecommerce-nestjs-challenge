@@ -4,6 +4,7 @@ import {
   IsEnum,
   IsInt,
   Min,
+  Max,
   IsDateString,
   IsOptional,
   MinLength,
@@ -23,7 +24,6 @@ export class CreatePromoCodeInput {
   @IsEnum(PromoType)
   type: PromoType;
 
-  //Discount value: percentage points (1-100) or fixed amount in cents
   @Field(() => Int)
   @IsInt()
   @Min(1)
@@ -38,10 +38,15 @@ export class CreatePromoCodeInput {
   @Min(1)
   usageLimit: number;
 
-  //Minimum purchase amount in cents (optional)
   @Field(() => Int, { nullable: true })
   @IsOptional()
   @IsInt()
   @Min(0)
   minPurchase?: number;
+
+  @Field(() => Int, { nullable: true })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  maxDiscountAmount?: number;
 }

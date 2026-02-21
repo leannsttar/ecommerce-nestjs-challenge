@@ -16,6 +16,7 @@ import {
   PaymentStatus,
 } from './entities/order.entity';
 import Stripe from 'stripe';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class OrdersService {
@@ -46,7 +47,72 @@ export class OrdersService {
       (sum, item) => sum + item.productVariant.price * item.quantity,
       0,
     );
-    const totalAmount = subtotal; // promo codes will reduce this later
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // PROMO CODE VALIDATION & DISCOUNT CALCULATION
+    // ──────────────────────────────────────────────────────────────────────────
+    let discountAmount = 0;
+    let promoCodeId: string | null = null;
+
+    let promoSnapshot: Prisma.InputJsonValue | typeof Prisma.JsonNull =
+      Prisma.JsonNull;
+
+    if (input.promoCode) {
+      const code = input.promoCode.toUpperCase();
+      const promo = await this.prisma.promoCode.findUnique({
+        where: { code },
+      });
+
+      if (!promo) {
+        throw new BadRequestException(`Promo code "${code}" does not exist.`);
+      }
+
+      if (!promo.isActive) {
+        throw new BadRequestException(
+          `Promo code "${code}" is currently inactive.`,
+        );
+      }
+
+      if (new Date() > promo.expiresAt) {
+        throw new BadRequestException(`Promo code "${code}" has expired.`);
+      }
+
+      if (promo.usageCount >= promo.usageLimit) {
+        throw new BadRequestException(
+          `Promo code "${code}" has reached its usage limit.`,
+        );
+      }
+
+      if (promo.minPurchase && subtotal < promo.minPurchase) {
+        const minDollars = (promo.minPurchase / 100).toFixed(2);
+        throw new BadRequestException(
+          `This promo code requires a minimum purchase of $${minDollars}.`,
+        );
+      }
+
+      // ── Calculate Discount ──────────────────────────────────────────────────
+      if (promo.type === 'PERCENTAGE') {
+        discountAmount = Math.floor((subtotal * promo.value) / 100);
+        if (promo.maxDiscountAmount) {
+          discountAmount = Math.min(discountAmount, promo.maxDiscountAmount);
+        }
+      } else {
+        discountAmount = promo.value;
+      }
+      discountAmount = Math.min(discountAmount, subtotal);
+
+      promoCodeId = promo.id;
+      promoSnapshot = {
+        code: promo.code,
+        type: promo.type,
+        value: promo.value,
+        maxDiscountAmount: promo.maxDiscountAmount,
+        discountApplied: discountAmount,
+      };
+    }
+
+    const totalAmount = subtotal - discountAmount;
+    // ──────────────────────────────────────────────────────────────────────────
 
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
 
@@ -98,8 +164,10 @@ export class OrdersService {
             status: OrderStatus.PENDING,
             shippingAddressSnapshot: { ...input.shippingAddress },
             subtotal,
+            discountAmount,
             totalAmount,
-            discountAmount: 0,
+            promoCodeId,
+            promoSnapshot,
             items: {
               create: cartItems.map((item) => ({
                 productVariantId: item.productVariantId,
@@ -121,6 +189,14 @@ export class OrdersService {
           await tx.productVariant.update({
             where: { id: item.productVariantId },
             data: { stockQuantity: { decrement: item.quantity } },
+          });
+        }
+
+        // Increment usage count atomically inside the transaction
+        if (promoCodeId) {
+          await tx.promoCode.update({
+            where: { id: promoCodeId },
+            data: { usageCount: { increment: 1 } },
           });
         }
 
@@ -256,6 +332,24 @@ export class OrdersService {
 
     const quantity = fullSession.line_items?.data?.[0]?.quantity ?? 1;
 
+    // Extract shipping address from Stripe once — reused for both refunded and normal paths.
+    // Always produce a well-shaped object with string fallbacks so GraphQL non-null fields
+    // (addressLine, city, country, postalCode) never receive undefined/null.
+    const stripeShipping =
+      fullSession.shipping_details?.address ||
+      fullSession.customer_details?.address;
+
+    this.logger.debug(
+      `Extracted shipping info: ${JSON.stringify(stripeShipping)} from Session ${fullSession.id}`,
+    );
+
+    const shippingSnapshot = {
+      addressLine: stripeShipping?.line1 ?? '',
+      city: stripeShipping?.city ?? '',
+      country: stripeShipping?.country ?? '',
+      postalCode: stripeShipping?.postal_code ?? '',
+    };
+
     if (variant.stockQuantity < quantity) {
       // Create refunded order and payment record
       await this.prisma.$transaction(async (tx) => {
@@ -267,7 +361,7 @@ export class OrdersService {
               fullSession.customer_email ??
               null,
             status: OrderStatus.REFUNDED,
-            shippingAddressSnapshot: {},
+            shippingAddressSnapshot: shippingSnapshot,
             subtotal: variant.price * quantity,
             totalAmount: variant.price * quantity,
             discountAmount: 0,
@@ -314,23 +408,6 @@ export class OrdersService {
 
     const unitPrice = variant.price;
     const totalAmount = unitPrice * quantity;
-
-    const stripeShipping =
-      fullSession.shipping_details?.address ||
-      fullSession.customer_details?.address;
-
-    this.logger.debug(
-      `Extracted shipping info: ${JSON.stringify(stripeShipping)} from Session ${fullSession.id}`,
-    );
-
-    const shippingSnapshot = stripeShipping
-      ? {
-          addressLine: stripeShipping.line1 ?? '',
-          city: stripeShipping.city ?? '',
-          country: stripeShipping.country ?? '',
-          postalCode: stripeShipping.postal_code ?? '',
-        }
-      : { addressLine: '', city: '', country: '', postalCode: '' };
 
     const guestEmail =
       fullSession.customer_details?.email ?? fullSession.customer_email ?? null;
