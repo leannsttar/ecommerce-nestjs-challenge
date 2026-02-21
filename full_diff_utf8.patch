@@ -1,0 +1,1394 @@
+﻿diff --git a/.env.example b/.env.example
+index dcfd273..23d834d 100644
+--- a/.env.example
++++ b/.env.example
+@@ -18,6 +18,9 @@ CORS_ORIGIN=*
+ SENDGRID_API_KEY="your-sendgrip-api-key"
+ SENDGRID_FROM_EMAIL="your-email@example.com"
+ 
++STRIPE_SECRET_KEY="your-stripe-secret-key"
++STRIPE_WEBHOOK_SECRET="your-wehbook-secret"
++
+ #rate limit
+ THROTTLE_SHORT_TTL=1000
+ THROTTLE_SHORT_LIMIT=3
+diff --git a/package-lock.json b/package-lock.json
+index 784e02f..ee6c052 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -20,10 +20,12 @@
+         "@nestjs/jwt": "^11.0.2",
+         "@nestjs/passport": "^11.0.5",
+         "@nestjs/platform-express": "^11.0.1",
++        "@nestjs/schedule": "^6.1.1",
+         "@nestjs/throttler": "^6.5.0",
+         "@prisma/adapter-pg": "^7.4.0",
+         "@prisma/client": "^7.4.0",
+         "@sendgrid/mail": "^8.1.6",
++        "@types/cron": "^2.0.1",
+         "bcrypt": "^6.0.0",
+         "class-transformer": "^0.5.1",
+         "class-validator": "^0.14.3",
+@@ -36,7 +38,8 @@
+         "passport-jwt": "^4.0.1",
+         "pg": "^8.18.0",
+         "reflect-metadata": "^0.2.2",
+-        "rxjs": "^7.8.1"
++        "rxjs": "^7.8.1",
++        "stripe": "^20.3.1"
+       },
+       "devDependencies": {
+         "@eslint/eslintrc": "^3.2.0",
+@@ -3083,6 +3086,19 @@
+         "@nestjs/core": "^11.0.0"
+       }
+     },
++    "node_modules/@nestjs/schedule": {
++      "version": "6.1.1",
++      "resolved": "https://registry.npmjs.org/@nestjs/schedule/-/schedule-6.1.1.tgz",
++      "integrity": "sha512-kQl1RRgi02GJ0uaUGCrXHCcwISsCsJDciCKe38ykJZgnAeeoeVWs8luWtBo4AqAAXm4nS5K8RlV0smHUJ4+2FA==",
++      "license": "MIT",
++      "dependencies": {
++        "cron": "4.4.0"
++      },
++      "peerDependencies": {
++        "@nestjs/common": "^10.0.0 || ^11.0.0",
++        "@nestjs/core": "^10.0.0 || ^11.0.0"
++      }
++    },
+     "node_modules/@nestjs/schematics": {
+       "version": "11.0.9",
+       "resolved": "https://registry.npmjs.org/@nestjs/schematics/-/schematics-11.0.9.tgz",
+@@ -3792,6 +3808,16 @@
+       "dev": true,
+       "license": "MIT"
+     },
++    "node_modules/@types/cron": {
++      "version": "2.0.1",
++      "resolved": "https://registry.npmjs.org/@types/cron/-/cron-2.0.1.tgz",
++      "integrity": "sha512-WHa/1rtNtD2Q/H0+YTTZoty+/5rcE66iAFX2IY+JuUoOACsevYyFkSYu/2vdw+G5LrmO7Lxowrqm0av4k3qWNQ==",
++      "license": "MIT",
++      "dependencies": {
++        "@types/luxon": "*",
++        "@types/node": "*"
++      }
++    },
+     "node_modules/@types/eslint": {
+       "version": "9.6.1",
+       "resolved": "https://registry.npmjs.org/@types/eslint/-/eslint-9.6.1.tgz",
+@@ -3924,6 +3950,12 @@
+       "integrity": "sha512-MqTGEo5bj5t157U6fA/BiDynNkn0YknVdh48CMPkTSpFTVmvao5UQmm7uEF6xBEo7qIMAlY/JSleYaE6VOdpaA==",
+       "license": "MIT"
+     },
++    "node_modules/@types/luxon": {
++      "version": "3.7.1",
++      "resolved": "https://registry.npmjs.org/@types/luxon/-/luxon-3.7.1.tgz",
++      "integrity": "sha512-H3iskjFIAn5SlJU7OuxUmTEpebK6TKB8rxZShDslBMZJ5u9S//KM1sbdAisiSrqwLQncVjnpi2OK2J51h+4lsg==",
++      "license": "MIT"
++    },
+     "node_modules/@types/methods": {
+       "version": "1.1.4",
+       "resolved": "https://registry.npmjs.org/@types/methods/-/methods-1.1.4.tgz",
+@@ -6086,6 +6118,23 @@
+       "dev": true,
+       "license": "MIT"
+     },
++    "node_modules/cron": {
++      "version": "4.4.0",
++      "resolved": "https://registry.npmjs.org/cron/-/cron-4.4.0.tgz",
++      "integrity": "sha512-fkdfq+b+AHI4cKdhZlppHveI/mgz2qpiYxcm+t5E5TsxX7QrLS1VE0+7GENEk9z0EeGPcpSciGv6ez24duWhwQ==",
++      "license": "MIT",
++      "dependencies": {
++        "@types/luxon": "~3.7.0",
++        "luxon": "~3.7.0"
++      },
++      "engines": {
++        "node": ">=18.x"
++      },
++      "funding": {
++        "type": "ko-fi",
++        "url": "https://ko-fi.com/intcreator"
++      }
++    },
+     "node_modules/cross-inspect": {
+       "version": "1.0.1",
+       "resolved": "https://registry.npmjs.org/cross-inspect/-/cross-inspect-1.0.1.tgz",
+@@ -9286,6 +9335,15 @@
+         "url": "https://github.com/sponsors/wellwelwel"
+       }
+     },
++    "node_modules/luxon": {
++      "version": "3.7.2",
++      "resolved": "https://registry.npmjs.org/luxon/-/luxon-3.7.2.tgz",
++      "integrity": "sha512-vtEhXh/gNjI9Yg1u4jX/0YVPMvxzHuGgCm6tC5kZyb08yjGWGnqAjGJvcXbqQR2P3MyMEFnRbpcdFS6PBcLqew==",
++      "license": "MIT",
++      "engines": {
++        "node": ">=12"
++      }
++    },
+     "node_modules/magic-string": {
+       "version": "0.30.17",
+       "resolved": "https://registry.npmjs.org/magic-string/-/magic-string-0.30.17.tgz",
+@@ -11355,6 +11413,23 @@
+         "url": "https://github.com/sponsors/sindresorhus"
+       }
+     },
++    "node_modules/stripe": {
++      "version": "20.3.1",
++      "resolved": "https://registry.npmjs.org/stripe/-/stripe-20.3.1.tgz",
++      "integrity": "sha512-k990yOT5G5rhX3XluRPw5Y8RLdJDW4dzQ29wWT66piHrbnM2KyamJ1dKgPsw4HzGHRWjDiSSdcI2WdxQUPV3aQ==",
++      "license": "MIT",
++      "engines": {
++        "node": ">=16"
++      },
++      "peerDependencies": {
++        "@types/node": ">=16"
++      },
++      "peerDependenciesMeta": {
++        "@types/node": {
++          "optional": true
++        }
++      }
++    },
+     "node_modules/strtok3": {
+       "version": "10.3.4",
+       "resolved": "https://registry.npmjs.org/strtok3/-/strtok3-10.3.4.tgz",
+diff --git a/package.json b/package.json
+index 2d1d0e1..7869cef 100644
+--- a/package.json
++++ b/package.json
+@@ -31,10 +31,12 @@
+     "@nestjs/jwt": "^11.0.2",
+     "@nestjs/passport": "^11.0.5",
+     "@nestjs/platform-express": "^11.0.1",
++    "@nestjs/schedule": "^6.1.1",
+     "@nestjs/throttler": "^6.5.0",
+     "@prisma/adapter-pg": "^7.4.0",
+     "@prisma/client": "^7.4.0",
+     "@sendgrid/mail": "^8.1.6",
++    "@types/cron": "^2.0.1",
+     "bcrypt": "^6.0.0",
+     "class-transformer": "^0.5.1",
+     "class-validator": "^0.14.3",
+@@ -47,7 +49,8 @@
+     "passport-jwt": "^4.0.1",
+     "pg": "^8.18.0",
+     "reflect-metadata": "^0.2.2",
+-    "rxjs": "^7.8.1"
++    "rxjs": "^7.8.1",
++    "stripe": "^20.3.1"
+   },
+   "devDependencies": {
+     "@eslint/eslintrc": "^3.2.0",
+diff --git a/prisma/schema.prisma b/prisma/schema.prisma
+index d5713c0..ca25829 100644
+--- a/prisma/schema.prisma
++++ b/prisma/schema.prisma
+@@ -35,9 +35,11 @@ model User {
+   updatedAt DateTime  @updatedAt @map("updated_at")
+   deletedAt DateTime? @map("deleted_at")
+ 
+-  refreshTokens RefreshToken[]
+-  cartItems     CartItem[]
+-  favorites     Favorite[]
++  refreshTokens  RefreshToken[]
++  cartItems      CartItem[]
++  favorites      Favorite[]
++  orders         Order[]        @relation("UserOrders")
++  deliveryOrders Order[]        @relation("DeliveryPersonOrders")
+ 
+   @@map("users")
+ }
+@@ -68,13 +70,14 @@ model Category {
+ }
+ 
+ model Product {
+-  id          String    @id @default(uuid()) @db.Uuid
+-  name        String
+-  description String    @db.Text
+-  isActive    Boolean   @default(true) @map("is_active")
+-  createdAt   DateTime  @default(now()) @map("created_at")
+-  updatedAt   DateTime  @updatedAt @map("updated_at")
+-  deletedAt   DateTime? @map("deleted_at")
++  id              String    @id @default(uuid()) @db.Uuid
++  name            String
++  description     String    @db.Text
++  isActive        Boolean   @default(true) @map("is_active")
++  stripeProductId String?   @map("stripe_product_id")
++  createdAt       DateTime  @default(now()) @map("created_at")
++  updatedAt       DateTime  @updatedAt @map("updated_at")
++  deletedAt       DateTime? @map("deleted_at")
+ 
+   categories      ProductCategory[]
+   images          ProductImage[]
+@@ -135,26 +138,119 @@ model ProductOptionValue {
+ }
+ 
+ model ProductVariant {
+-  id            String    @id @default(uuid()) @db.Uuid
+-  productId     String    @map("product_id") @db.Uuid
+-  sku           String    @unique
+-  price         Int
+-  stockQuantity Int       @map("stock_quantity")
+-  image         String?   @db.Text
+-  isActive      Boolean   @default(true) @map("is_active")
+-  createdAt     DateTime  @default(now()) @map("created_at")
+-  updatedAt     DateTime  @updatedAt @map("updated_at")
+-  deletedAt     DateTime? @map("deleted_at")
++  id                  String    @id @default(uuid()) @db.Uuid
++  productId           String    @map("product_id") @db.Uuid
++  sku                 String    @unique
++  price               Int
++  stockQuantity       Int       @map("stock_quantity")
++  image               String?   @db.Text
++  isActive            Boolean   @default(true) @map("is_active")
++  stripePriceId       String?   @map("stripe_price_id")
++  stripePaymentLinkId String?   @map("stripe_payment_link_id")
++  paymentLinkUrl      String?   @map("payment_link_url")
++  createdAt           DateTime  @default(now()) @map("created_at")
++  updatedAt           DateTime  @updatedAt @map("updated_at")
++  deletedAt           DateTime? @map("deleted_at")
+ 
+   product       Product               @relation(fields: [productId], references: [id], onDelete: Cascade)
+   optionValues  ProductVariantValue[]
+   productImages ProductImage[]
+   cartItems     CartItem[]
+   favorites     Favorite[]
++  orderItems    OrderItem[]
+ 
+   @@map("product_variants")
+ }
+ 
++// ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
++// ORDERS
++// ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
++
++enum OrderStatus {
++  PENDING
++  PAID
++  PROCESSING
++  SHIPPED
++  DELIVERED
++  CANCELLED
++  REFUNDED
++
++  @@map("order_status")
++}
++
++enum PaymentStatus {
++  PENDING
++  SUCCEEDED
++  FAILED
++  REFUNDED
++
++  @@map("payment_status")
++}
++
++enum PaymentMethod {
++  PAYMENT_LINK
++  PAYMENT_INTENT
++
++  @@map("payment_method")
++}
++
++model Order {
++  id                      String      @id @default(uuid()) @db.Uuid
++  userId                  String?     @map("user_id") @db.Uuid
++  guestEmail              String?     @map("guest_email")
++  status                  OrderStatus @default(PENDING)
++  deliveryPersonId        String?     @map("delivery_person_id") @db.Uuid
++  shippingAddressSnapshot Json        @map("shipping_address_snapshot")
++  promoCodeId             String?     @map("promo_code_id") @db.Uuid
++  promoSnapshot           Json?       @map("promo_snapshot")
++  subtotal                Int
++  discountAmount          Int         @default(0) @map("discount_amount")
++  totalAmount             Int         @map("total_amount")
++  createdAt               DateTime    @default(now()) @map("created_at")
++  updatedAt               DateTime    @updatedAt @map("updated_at")
++
++  user           User?       @relation("UserOrders", fields: [userId], references: [id])
++  deliveryPerson User?       @relation("DeliveryPersonOrders", fields: [deliveryPersonId], references: [id])
++  promoCode      PromoCode?  @relation(fields: [promoCodeId], references: [id])
++  items          OrderItem[]
++  payments       Payment[]
++
++  @@map("orders")
++}
++
++model OrderItem {
++  id                  String @id @default(uuid()) @db.Uuid
++  orderId             String @map("order_id") @db.Uuid
++  productVariantId    String @map("product_variant_id") @db.Uuid
++  quantity            Int
++  unitPriceAtPurchase Int    @map("unit_price_at_purchase")
++  totalPrice          Int    @map("total_price")
++  productSnapshot     Json   @map("product_snapshot")
++
++  order          Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
++  productVariant ProductVariant @relation(fields: [productVariantId], references: [id])
++
++  @@map("order_items")
++}
++
++model Payment {
++  id                    String        @id @default(uuid()) @db.Uuid
++  orderId               String        @map("order_id") @db.Uuid
++  stripePaymentIntentId String?       @map("stripe_payment_intent_id")
++  stripeSessionId       String?       @map("stripe_session_id")
++  stripePaymentLinkId   String?       @map("stripe_payment_link_id")
++  paymentMethod         PaymentMethod @map("payment_method")
++  status                PaymentStatus @default(PENDING)
++  currency              String
++  amount                Int
++  paymentDate           DateTime?     @map("payment_date")
++  createdAt             DateTime      @default(now()) @map("created_at")
++
++  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
++
++  @@map("payments")
++}
++
+ model ProductVariantValue {
+   productVariantId     String @map("product_variant_id") @db.Uuid
+   productOptionValueId String @map("product_option_value_id") @db.Uuid
+@@ -200,6 +296,7 @@ model PromoCode {
+   isActive    Boolean   @default(true) @map("is_active")
+   createdAt   DateTime  @default(now()) @map("created_at")
+   updatedAt   DateTime  @updatedAt @map("updated_at")
++  orders      Order[]
+ 
+   @@map("promo_codes")
+ }
+diff --git a/project_architecture.md b/project_architecture.md
+index da96d2b..802b227 100644
+--- a/project_architecture.md
++++ b/project_architecture.md
+@@ -90,6 +90,9 @@ Table products {
+   name varchar
+   description text
+   is_active bool [default: true]
++
++  stripe_product_id varchar [null]
++
+   created_at timestamp
+   updated_at timestamp
+   deleted_at timestamp
+@@ -107,8 +110,14 @@ Table product_variants {
+   id uuid [primary key]
+   product_id uuid [ref: > products.id]
+   sku varchar [unique]
++  image_url text [null]
+   price int [note: 'Price in cents']
+   stock_quantity integer
++
++  stripe_price_id varchar [null]
++  stripe_payment_link_id text [null]
++  payment_link_url text [null]
++
+   created_at timestamp
+   updated_at timestamp
+   deleted_at timestamp
+@@ -141,7 +150,6 @@ Table product_variant_values {
+ Table product_images {
+   id uuid [primary key]
+   product_id uuid [ref: > products.id, null]
+-  product_variant_id uuid [ref: > product_variants.id, null]
+   is_main boolean
+   key text
+   created_at timestamp
+@@ -161,10 +169,15 @@ Table cart_items {
+ 
+ Table orders {
+   id uuid [primary key]
+-  user_id uuid [ref: > users.id]
++  user_id uuid [ref: > users.id, null]
++
++  guest_email varchar [null]
++
+   status order_status [default: 'pending']
+   delivery_person_id uuid [ref: > users.id, null]
++
+   shipping_address_snapshot jsonb
++
+   promo_code_id uuid [ref: > promo_codes.id, null]
+   promo_snapshot jsonb [note: 'stores {code, value, type}', null]
+   subtotal int [note: 'Sum of items before discount']
+@@ -187,14 +200,20 @@ Table order_items {
+ Table payments {
+   id uuid [primary key]
+   order_id uuid [ref: > orders.id]
+-  stripe_payment_id text
++
++  stripe_payment_intent_id text [null]
+   stripe_session_id text [null]
++  stripe_payment_link_id text [null]
++
+   payment_method payment_method
+   status payment_status [default: 'pending']
+-  receipt_url text
++
++  receipt_url text [null]
++
+   currency varchar
+   amount int
+-  payment_date timestamp
++
++  payment_date timestamp [null]
+ }
+ 
+ Table favorites {
+@@ -217,11 +236,11 @@ Table promo_codes {
+   usage_limit int
+   usage_count int [default: 0]
+   min_purchase int [null]
++  max_discount_amount int [null]
+   is_active boolean [default: true]
+   created_at timestamp
+   updated_at timestamp
+ }
+-
+ ```
+ 
+ ## ≡ƒô¥ GraphQL Schema (SDL)
+@@ -349,6 +368,8 @@ type Variant {
+   Always false for unauthenticated requests.
+   """
+   isFavorite: Boolean!
++
++  paymentLinkUrl: String
+ }
+ 
+ type SelectedOption {
+@@ -471,6 +492,7 @@ type PromoCode {
+   usageLimit: Int!
+   usageCount: Int!
+   minPurchase: Int
++  max_discount_amount: Int
+   isActive: Boolean!
+   createdAt: DateTime!
+   updatedAt: DateTime!
+@@ -483,7 +505,7 @@ type PromoCode {
+ type Query {
+   # --- PUBLIC ---
+   product(id: ID!): Product
+-  products(limit: Int = 15, offset: Int = 0, categoryId: ID): PaginatedProducts!
++  products(limit: Int = 15, page: Int = 0, categoryId: ID): PaginatedProducts!
+ 
+   categories: [Category!]!
+ 
+@@ -509,7 +531,7 @@ type Query {
+   orders(
+     filter: OrderFilterInput
+     limit: Int = 20
+-    offset: Int = 0
++    page: Int = 0
+   ): PaginatedOrders!
+ 
+   # --- MANAGER ONLY ---
+diff --git a/src/app.module.ts b/src/app.module.ts
+index dc6994a..39ee071 100644
+--- a/src/app.module.ts
++++ b/src/app.module.ts
+@@ -21,6 +21,9 @@ import { CaslModule } from './common/casl/casl.module';
+ import { ApolloServerPluginLandingPageDisabled } from '@apollo/server/plugin/disabled';
+ import { PromoModule } from './modules/promo/promo.module';
+ import { FavoritesModule } from './modules/favorites/favorites.module';
++import { StripeModule } from './modules/stripe/stripe.module';
++import { OrdersModule } from './modules/orders/orders.module';
++import { ScheduleModule } from '@nestjs/schedule';
+ 
+ @Module({
+   imports: [
+@@ -34,6 +37,7 @@ import { FavoritesModule } from './modules/favorites/favorites.module';
+         allowUnknown: true,
+       },
+     }),
++    ScheduleModule.forRoot(),
+     PrismaModule,
+     AuthModule,
+     ThrottlerModule.forRootAsync({
+@@ -82,6 +86,8 @@ import { FavoritesModule } from './modules/favorites/favorites.module';
+     CartModule,
+     PromoModule,
+     FavoritesModule,
++    StripeModule,
++    OrdersModule,
+     CaslModule,
+   ],
+   controllers: [AppController],
+diff --git a/src/common/casl/casl-ability.factory.ts b/src/common/casl/casl-ability.factory.ts
+index 97cb7ad..2eb0b36 100644
+--- a/src/common/casl/casl-ability.factory.ts
++++ b/src/common/casl/casl-ability.factory.ts
+@@ -4,7 +4,6 @@ import {
+   MongoAbility,
+   InferSubjects,
+   ExtractSubjectType,
+-  Subject,
+ } from '@casl/ability';
+ import { Injectable } from '@nestjs/common';
+ import { UserRole } from '@prisma/client';
+@@ -13,13 +12,22 @@ import { Category } from 'src/modules/categories/entities/category.entity';
+ import { Variant } from 'src/modules/products/entities/variants/variant.entity';
+ import { PromoCode } from 'src/modules/promo/entities/promo-code.entity';
+ import { Favorite } from 'src/modules/favorites/entities/favorite.entity';
++import {
++  Order,
++  Payment,
++  OrderStatus,
++} from 'src/modules/orders/entities/order.entity';
++import { Cart } from 'src/modules/cart/entities/cart.entity';
+ 
+ export enum Action {
+-  Manage = 'manage', //all
++  Manage = 'manage', // all
+   Create = 'create',
+   Read = 'read',
+   Update = 'update',
+   Delete = 'delete',
++  Apply = 'apply', // promo code
++  Deliver = 'deliver', // delivery person mark as delivered
++  Cancel = 'cancel', // cancel an order (client/manager only)
+ }
+ 
+ export type Subjects = InferSubjects<
+@@ -28,10 +36,12 @@ export type Subjects = InferSubjects<
+   | typeof Variant
+   | typeof PromoCode
+   | typeof Favorite
++  | typeof Order
++  | typeof Payment
++  | typeof Cart
+   | 'all'
+ >;
+ 
+-//abilitie is action and resource
+ export type AppAbility = MongoAbility<[Action, Subjects]>;
+ 
+ interface AuthUser {
+@@ -42,17 +52,33 @@ interface AuthUser {
+ @Injectable()
+ export class CaslAbilityFactory {
+   defineAbility(user: AuthUser): AppAbility {
+-    const { can, build } = new AbilityBuilder<AppAbility>(createMongoAbility);
++    const { can, cannot, build } = new AbilityBuilder<AppAbility>(
++      createMongoAbility,
++    );
+ 
+     if (user.role === UserRole.MANAGER) {
+-      // manager mostly everything
+       can(Action.Manage, 'all');
+     } else if (user.role === UserRole.CLIENT) {
+-      can(Action.Read, Product);
+       can(Action.Read, Category);
++      can(Action.Read, Product);
+       can(Action.Manage, Favorite);
++      can(Action.Manage, Cart, { userId: user.id });
++      can(Action.Create, Order);
++      can(Action.Read, Order, { userId: user.id });
++      can(Action.Cancel, Order, { userId: user.id }); // cancel own orders only
++      can(Action.Apply, PromoCode);
++      can(Action.Read, Payment);
++    } else if (user.role === UserRole.DELIVERY_PERSON) {
++      can(Action.Read, Order, {
++        status: OrderStatus.SHIPPED,
++        deliveryPersonId: user.id,
++      });
++      can(Action.Deliver, Order, {
++        status: OrderStatus.SHIPPED,
++        deliveryPersonId: user.id,
++      });
++      cannot(Action.Read, Payment);
+     }
+-
+     return build({
+       detectSubjectType: (item) =>
+         item.constructor as ExtractSubjectType<Subjects>,
+diff --git a/src/common/casl/decorators/check-abilities.decorator.ts b/src/common/casl/decorators/check-abilities.decorator.ts
+index fc8dd06..7b166fe 100644
+--- a/src/common/casl/decorators/check-abilities.decorator.ts
++++ b/src/common/casl/decorators/check-abilities.decorator.ts
+@@ -1,16 +1,13 @@
+ import { SetMetadata } from '@nestjs/common';
+ import { Action, Subjects } from '../casl-ability.factory';
+ 
+-// receivess user's ability and returns T or F
+ export interface RequiredRule {
+   action: Action;
+   subject: Subjects;
+ }
+ 
+-// used to store the rules on route handlers
+ export const CHECK_ABILITIES_KEY = 'check_abilities';
+ 
+-//decorator to attach ability requirements
+ //example: @CheckAbilities({ action: Action.Create, subject: Product })
+ export const CheckAbilities = (...requirements: RequiredRule[]) =>
+   SetMetadata(CHECK_ABILITIES_KEY, requirements);
+diff --git a/src/common/config/namespaces/app.config.ts b/src/common/config/namespaces/app.config.ts
+index d3c42e0..3150b70 100644
+--- a/src/common/config/namespaces/app.config.ts
++++ b/src/common/config/namespaces/app.config.ts
+@@ -9,4 +9,7 @@ export const appConfig = registerAs('app', () => ({
+ 
+   sendgridApiKey: process.env.SENDGRID_API_KEY,
+   sendgridFromEmail: process.env.SENDGRID_FROM_EMAIL,
++
++  stripeSecretKey: process.env.STRIPE_SECRET_KEY,
++  stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+ }));
+diff --git a/src/common/config/validation.schema.ts b/src/common/config/validation.schema.ts
+index 2e30b0a..c9fc19e 100644
+--- a/src/common/config/validation.schema.ts
++++ b/src/common/config/validation.schema.ts
+@@ -22,14 +22,17 @@ export const validationSchema = Joi.object({
+   SENDGRID_API_KEY: Joi.string().required(),
+   SENDGRID_FROM_EMAIL: Joi.string().email().required(),
+ 
++  //stripe
++  STRIPE_SECRET_KEY: Joi.string().required(),
++  STRIPE_WEBHOOK_SECRET: Joi.string().required(),
++
+   //rate limit
+   THROTTLE_SHORT_TTL: Joi.number().default(1000),
+   THROTTLE_SHORT_LIMIT: Joi.number().default(3),
+-  
++
+   THROTTLE_MEDIUM_TTL: Joi.number().default(10000),
+   THROTTLE_MEDIUM_LIMIT: Joi.number().default(20),
+-  
++
+   THROTTLE_LONG_TTL: Joi.number().default(60000),
+   THROTTLE_LONG_LIMIT: Joi.number().default(100),
+-
+ });
+diff --git a/src/main.ts b/src/main.ts
+index f846a49..98bf2a7 100644
+--- a/src/main.ts
++++ b/src/main.ts
+@@ -7,7 +7,9 @@ import cookieParser from 'cookie-parser';
+ import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
+ 
+ async function bootstrap() {
+-  const app = await NestFactory.create(AppModule);
++  const app = await NestFactory.create(AppModule, {
++    rawBody: true, // Enables req.rawBody for webhook signature verification
++  });
+   const configService = app.get(ConfigService);
+ 
+   app.use(helmet());
+@@ -35,7 +37,7 @@ async function bootstrap() {
+   );
+ 
+   const port = configService.getOrThrow<number>('app.port');
+-  await app.listen(port);
++  await app.listen(port, '0.0.0.0');
+   console.log(`Application is running on: http://localhost:${port}/api`);
+ }
+ bootstrap();
+diff --git a/src/modules/cart/cart.module.ts b/src/modules/cart/cart.module.ts
+index de31a77..66d672a 100644
+--- a/src/modules/cart/cart.module.ts
++++ b/src/modules/cart/cart.module.ts
+@@ -1,8 +1,10 @@
+ import { Module } from '@nestjs/common';
+ import { CartResolver } from './cart.resolver';
+ import { CartService } from './cart.service';
++import { CaslModule } from '../../common/casl/casl.module';
+ 
+ @Module({
++  imports: [CaslModule],
+   providers: [CartResolver, CartService],
+   exports: [CartService],
+ })
+diff --git a/src/modules/cart/cart.resolver.ts b/src/modules/cart/cart.resolver.ts
+index 369f44e..965a3ef 100644
+--- a/src/modules/cart/cart.resolver.ts
++++ b/src/modules/cart/cart.resolver.ts
+@@ -7,7 +7,7 @@ import {
+   ResolveField,
+   Parent,
+ } from '@nestjs/graphql';
+-import { ParseUUIDPipe } from '@nestjs/common';
++import { ParseUUIDPipe, UseGuards } from '@nestjs/common';
+ import { CartService } from './cart.service';
+ import { Cart } from './entities/cart.entity';
+ import { CartItem } from './entities/cart-item.entity';
+@@ -15,6 +15,9 @@ import { AddToCartInput } from './dto/add-to-cart.input';
+ import { UpdateCartItemInput } from './dto/update-cart-item.input';
+ import { CurrentUser } from '../auth/decorators/current-user.decorator';
+ import { Variant } from '../products/entities/variants/variant.entity';
++import { AbilitiesGuard } from '../../common/casl/guards/abilities.guard';
++import { CheckAbilities } from '../../common/casl/decorators/check-abilities.decorator';
++import { Action } from '../../common/casl/casl-ability.factory';
+ 
+ @Resolver(() => CartItem)
+ export class CartResolver {
+@@ -22,6 +25,8 @@ export class CartResolver {
+ 
+   // ΓöÇΓöÇΓöÇ Queries ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+ 
++  @UseGuards(AbilitiesGuard)
++  @CheckAbilities({ action: Action.Manage, subject: Cart })
+   @Query(() => Cart, { name: 'myCart' })
+   myCart(@CurrentUser() user: { id: string }) {
+     return this.cartService.getCart(user.id);
+@@ -29,6 +34,8 @@ export class CartResolver {
+ 
+   // ΓöÇΓöÇΓöÇ Mutations ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
+ 
++  @UseGuards(AbilitiesGuard)
++  @CheckAbilities({ action: Action.Manage, subject: Cart })
+   @Mutation(() => Cart)
+   addItemToCart(
+     @CurrentUser() user: { id: string },
+@@ -37,6 +44,8 @@ export class CartResolver {
+     return this.cartService.addItem(user.id, input);
+   }
+ 
++  @UseGuards(AbilitiesGuard)
++  @CheckAbilities({ action: Action.Manage, subject: Cart })
+   @Mutation(() => Cart)
+   updateCartItemQuantity(
+     @CurrentUser() user: { id: string },
+@@ -46,6 +55,8 @@ export class CartResolver {
+     return this.cartService.updateItemQuantity(user.id, id, input);
+   }
+ 
++  @UseGuards(AbilitiesGuard)
++  @CheckAbilities({ action: Action.Manage, subject: Cart })
+   @Mutation(() => Cart)
+   removeItemFromCart(
+     @CurrentUser() user: { id: string },
+@@ -54,6 +65,8 @@ export class CartResolver {
+     return this.cartService.removeItem(user.id, id);
+   }
+ 
++  @UseGuards(AbilitiesGuard)
++  @CheckAbilities({ action: Action.Manage, subject: Cart })
+   @Mutation(() => Cart)
+   clearCart(@CurrentUser() user: { id: string }) {
+     return this.cartService.clearCart(user.id);
+diff --git a/src/modules/cart/entities/cart-item.entity.ts b/src/modules/cart/entities/cart-item.entity.ts
+index 5a5c9a3..cc69a97 100644
+--- a/src/modules/cart/entities/cart-item.entity.ts
++++ b/src/modules/cart/entities/cart-item.entity.ts
+@@ -12,7 +12,6 @@ export class CartItem {
+   @Field(() => Variant)
+   variant: Variant;
+ 
+-  //Computed field: price * quantity
+   @Field(() => Int)
+   subtotal: number;
+ }
+diff --git a/src/modules/cart/entities/cart.entity.ts b/src/modules/cart/entities/cart.entity.ts
+index cfd9585..5032eb8 100644
+--- a/src/modules/cart/entities/cart.entity.ts
++++ b/src/modules/cart/entities/cart.entity.ts
+@@ -6,6 +6,8 @@ export class Cart {
+   @Field(() => ID)
+   id: string;
+ 
++  userId: string;
++
+   @Field(() => [CartItem])
+   items: CartItem[];
+ 
+diff --git a/src/modules/products/entities/variants/variant.entity.ts b/src/modules/products/entities/variants/variant.entity.ts
+index 6b5f5da..310e79c 100644
+--- a/src/modules/products/entities/variants/variant.entity.ts
++++ b/src/modules/products/entities/variants/variant.entity.ts
+@@ -27,4 +27,7 @@ export class Variant {
+ 
+   @Field()
+   isFavorite: boolean;
++
++  @Field({ nullable: true })
++  paymentLinkUrl?: string;
+ }
+diff --git a/src/modules/products/products.module.ts b/src/modules/products/products.module.ts
+index 185655a..f25b8f3 100644
+--- a/src/modules/products/products.module.ts
++++ b/src/modules/products/products.module.ts
+@@ -12,9 +12,10 @@ import { OptionsDataLoader } from './loaders/options.dataloader';
+ import { VariantsDataLoader } from './loaders/variants.dataloader';
+ import { SelectedOptionsDataLoader } from './loaders/selected-options.dataloader';
+ import { FavoritesModule } from '../favorites/favorites.module';
++import { StripeModule } from '../stripe/stripe.module';
+ 
+ @Module({
+-  imports: [CategoriesModule, CaslModule, FavoritesModule],
++  imports: [CategoriesModule, CaslModule, FavoritesModule, StripeModule],
+   providers: [
+     ProductsResolver,
+     VariantsResolver,
+diff --git a/src/modules/products/services/product-variants.service.ts b/src/modules/products/services/product-variants.service.ts
+index 78aac4b..be22e67 100644
+--- a/src/modules/products/services/product-variants.service.ts
++++ b/src/modules/products/services/product-variants.service.ts
+@@ -2,14 +2,21 @@ import {
+   Injectable,
+   NotFoundException,
+   BadRequestException,
++  Logger,
+ } from '@nestjs/common';
+ import { PrismaService } from '../../../prisma/prisma.service';
+ import { CreateVariantInput } from '../dto/variants/create-variant.input';
+ import { UpdateVariantInput } from '../dto/variants/update-variant.input';
++import { StripeService } from '../../stripe/stripe.service';
+ 
+ @Injectable()
+ export class ProductVariantsService {
+-  constructor(private readonly prisma: PrismaService) {}
++  private readonly logger = new Logger(ProductVariantsService.name);
++
++  constructor(
++    private readonly prisma: PrismaService,
++    private readonly stripe: StripeService,
++  ) {}
+ 
+   async addVariant(productId: string, input: CreateVariantInput) {
+     const product = await this.prisma.product.findFirst({
+@@ -55,7 +62,7 @@ export class ProductVariantsService {
+       }
+     }
+ 
+-    return this.prisma.$transaction(async (tx) => {
++    const variantResult = await this.prisma.$transaction(async (tx) => {
+       const optionValueIds: string[] = [];
+       for (const selected of input.selectedOptions) {
+         const valueKey = `${selected.name}:${selected.value}`;
+@@ -113,7 +120,7 @@ export class ProductVariantsService {
+         }
+       }
+ 
+-      return tx.productVariant.create({
++      const variant = await tx.productVariant.create({
+         data: {
+           productId,
+           sku: input.sku,
+@@ -127,11 +134,80 @@ export class ProductVariantsService {
+           },
+         },
+       });
++
++      return variant;
++    });
++
++    // After DB creation, sync with Stripe.
++    // We do this OUTSIDE the DB transaction because Stripe calls are external
++    // and cannot be rolled back. If Stripe fails, the variant exists in our DB
++    // without Stripe IDs, which is recoverable (can retry Stripe sync separately).
++    const productResult = await this.prisma.product.findUnique({
++      where: { id: productId },
++    });
++
++    /**
++     * ≡ƒôû STRIPE SYNC: Create Price and Payment Link per Variant
++     *
++     * A Price is linked to the Stripe Product (via stripeProductId).
++     * A Payment Link wraps the Price into a shareable checkout URL.
++     *
++     * If the product has no stripeProductId yet (e.g., Stripe was down during
++     * product creation), we skip Stripe sync gracefully.
++     */
++    if (productResult?.stripeProductId) {
++      try {
++        const stripePrice = await this.stripe.createPrice({
++          stripeProductId: productResult.stripeProductId,
++          unitAmount: variantResult.price,
++          metadata: { variantId: variantResult.id },
++        });
++
++        const stripePaymentLink = await this.stripe.createPaymentLink({
++          stripePriceId: stripePrice.id,
++          variantId: variantResult.id,
++        });
++
++        // Update the variant record with Stripe IDs
++        await this.prisma.productVariant.update({
++          where: { id: variantResult.id },
++          data: {
++            stripePriceId: stripePrice.id,
++            stripePaymentLinkId: stripePaymentLink.id,
++            paymentLinkUrl: stripePaymentLink.url,
++          },
++        });
++      } catch (err) {
++        this.logger.error(
++          `Failed to sync variant ${variantResult.id} with Stripe: ${err.message}`,
++        );
++      }
++    }
++
++    return this.prisma.productVariant.findUnique({
++      where: { id: variantResult.id },
+     });
+   }
+ 
++  /**
++   * Update a variant. If the price changes, we must deactivate the old
++   * Stripe Price and Payment Link and create new ones.
++   *
++   * ≡ƒôû WHY THE OLD PRICE MUST BE DEACTIVATED:
++   * Stripe Prices are immutable. You cannot change '$20' to '$25' on the same
++   * Price object. Instead you create a new Price and archive the old one.
++   * The Payment Link also needs to be recreated because it references a specific Price.
++   */
+   async updateVariant(variantId: string, input: UpdateVariantInput) {
+-    return this.prisma.productVariant.update({
++    const existing = await this.prisma.productVariant.findFirst({
++      where: { id: variantId, deletedAt: null },
++      include: { product: true },
++    });
++    if (!existing) {
++      throw new NotFoundException(`Variant ${variantId} not found`);
++    }
++
++    const updated = await this.prisma.productVariant.update({
+       where: { id: variantId },
+       data: {
+         sku: input.sku,
+@@ -140,8 +216,61 @@ export class ProductVariantsService {
+         image: input.image,
+       },
+     });
++
++    // Stripe sync: if price changed, rotate Price and Payment Link
++    const priceChanged =
++      input.price !== undefined && input.price !== existing.price;
++
++    if (priceChanged && existing.product.stripeProductId) {
++      try {
++        // Step 1: Deactivate old Price and Payment Link
++        if (existing.stripePriceId) {
++          await this.stripe.deactivatePrice(existing.stripePriceId);
++        }
++        if (existing.stripePaymentLinkId) {
++          await this.stripe.deactivatePaymentLink(existing.stripePaymentLinkId);
++        }
++
++        // Step 2: Create new Price
++        const newPrice = await this.stripe.createPrice({
++          stripeProductId: existing.product.stripeProductId,
++          unitAmount: updated.price,
++          metadata: { variantId },
++        });
++
++        // Step 3: Create new Payment Link
++        const newPaymentLink = await this.stripe.createPaymentLink({
++          stripePriceId: newPrice.id,
++          variantId,
++        });
++
++        // Step 4: Update DB with new Stripe IDs
++        await this.prisma.productVariant.update({
++          where: { id: variantId },
++          data: {
++            stripePriceId: newPrice.id,
++            stripePaymentLinkId: newPaymentLink.id,
++            paymentLinkUrl: newPaymentLink.url,
++          },
++        });
++      } catch (err) {
++        this.logger.error(
++          `Failed to rotate Stripe price for variant ${variantId}: ${err.message}`,
++        );
++      }
++    }
++
++    return this.prisma.productVariant.findUnique({
++      where: { id: variantId },
++    });
+   }
+ 
++  /**
++   * Soft-delete a variant. Deactivates Stripe Price and Payment Link.
++   *
++   * ≡ƒôû After deactivation the Payment Link URL no longer works, preventing
++   * customers from purchasing a deleted variant via the shareable link.
++   */
+   async deleteVariant(variantId: string) {
+     const variant = await this.prisma.productVariant.findFirst({
+       where: { id: variantId, deletedAt: null },
+@@ -164,6 +293,26 @@ export class ProductVariantsService {
+       );
+     }
+ 
++    // Deactivate Stripe Price and Payment Link before soft-deleting
++    if (variant.stripePriceId) {
++      try {
++        await this.stripe.deactivatePrice(variant.stripePriceId);
++      } catch (err) {
++        this.logger.warn(
++          `Failed to deactivate Stripe price ${variant.stripePriceId}: ${err.message}`,
++        );
++      }
++    }
++    if (variant.stripePaymentLinkId) {
++      try {
++        await this.stripe.deactivatePaymentLink(variant.stripePaymentLinkId);
++      } catch (err) {
++        this.logger.warn(
++          `Failed to deactivate Stripe payment link ${variant.stripePaymentLinkId}: ${err.message}`,
++        );
++      }
++    }
++
+     return this.prisma.productVariant.update({
+       where: { id: variantId },
+       data: { deletedAt: new Date() },
+diff --git a/src/modules/products/services/products.service.ts b/src/modules/products/services/products.service.ts
+index 68f67f0..99e4c83 100644
+--- a/src/modules/products/services/products.service.ts
++++ b/src/modules/products/services/products.service.ts
+@@ -2,15 +2,23 @@ import {
+   Injectable,
+   NotFoundException,
+   BadRequestException,
++  Logger,
++  InternalServerErrorException,
+ } from '@nestjs/common';
+ import { PrismaService } from '../../../prisma/prisma.service';
+ import { CreateProductInput } from '../dto/create-product.input';
+ import { UpdateProductInput } from '../dto/update-product.input';
+ import { AddImageInput } from '../dto/add-image.input';
++import { StripeService } from '../../stripe/stripe.service';
+ 
+ @Injectable()
+ export class ProductsService {
+-  constructor(private readonly prisma: PrismaService) {}
++  private readonly logger = new Logger(ProductsService.name);
++
++  constructor(
++    private readonly prisma: PrismaService,
++    private readonly stripe: StripeService,
++  ) {}
+ 
+   async findAll(
+     limit: number,
+@@ -86,10 +94,32 @@ export class ProductsService {
+       );
+     }
+ 
++    /**
++     * ≡ƒôû STRIPE SYNC: Create Stripe Product first
++     * We create the Stripe Product BEFORE saving to the DB.
++     * If Stripe fails, we don't create the DB record either (no orphans).
++     * If the DB insert fails after Stripe creation, we have an orphan Stripe
++     * Product, which is acceptable ΓÇö it stays inactive and won't affect billing.
++     */
++    let stripeProductId: string | undefined;
++    try {
++      const stripeProduct = await this.stripe.createProduct({
++        name: productData.name,
++        description: productData.description,
++      });
++      stripeProductId = stripeProduct.id;
++    } catch (err) {
++      this.logger.error(`Failed to create Stripe product: ${err.message}`);
++      throw new InternalServerErrorException(
++        'Could not create product in Stripe',
++      );
++    }
++
+     return this.prisma.$transaction(async (tx) => {
+       const product = await tx.product.create({
+         data: {
+           ...productData,
++          stripeProductId,
+           categories: {
+             create: categoryIds.map((id) => ({
+               category: { connect: { id } },
+@@ -138,14 +168,58 @@ export class ProductsService {
+     });
+   }
+ 
++  /**
++   * Soft delete the product. Also deactivates it on Stripe.
++   *
++   * ≡ƒôû WHY DEACTIVATE ON STRIPE?
++   * If we just delete it in our DB but leave it active in Stripe, the
++   * payment links for its variants would still work! Customers could still
++   * check out for a product that no longer exists in our system.
++   */
+   async remove(id: string) {
++    const product = await this.prisma.product.findFirst({
++      where: { id, deletedAt: null },
++    });
++    if (!product) throw new NotFoundException(`Product ${id} not found`);
++
++    if (product.stripeProductId) {
++      try {
++        await this.stripe.deactivateProduct(product.stripeProductId);
++      } catch (err) {
++        this.logger.warn(
++          `Failed to deactivate Stripe product ${product.stripeProductId}: ${err.message}`,
++        );
++      }
++    }
++
+     return this.prisma.product.update({
+       where: { id },
+       data: { deletedAt: new Date() },
+     });
+   }
+ 
++  /**
++   * Disable the product (sets isActive=false). Also deactivates on Stripe.
++   */
+   async disable(id: string) {
++    const product = await this.prisma.product.findFirst({
++      where: { id, deletedAt: null },
++    });
++
++    if (!product) {
++      throw new NotFoundException(`Product ${id} not found`);
++    }
++
++    if (product.stripeProductId) {
++      try {
++        await this.stripe.deactivateProduct(product.stripeProductId);
++      } catch (err) {
++        this.logger.warn(
++          `Failed to deactivate Stripe product ${product.stripeProductId}: ${err.message}`,
++        );
++      }
++    }
++
+     return this.prisma.product.update({
+       where: { id },
+       data: { isActive: false },
+diff --git a/src/prisma/prisma.service.ts b/src/prisma/prisma.service.ts
+index dd84c12..91dbcfb 100644
+--- a/src/prisma/prisma.service.ts
++++ b/src/prisma/prisma.service.ts
+@@ -12,7 +12,7 @@ export class PrismaService
+       connectionString: process.env.DATABASE_URL!,
+     });
+ 
+-    super({ adapter, log: ['query'] });
++    super({ adapter });
+   }
+ 
+   async onModuleInit() {
+diff --git a/src/schema.gql b/src/schema.gql
+index b70f6ed..723088f 100644
+--- a/src/schema.gql
++++ b/src/schema.gql
+@@ -11,11 +11,22 @@ input AddToCartInput {
+   variantId: ID!
+ }
+ 
++input AssignOrdersInput {
++  deliveryPersonId: ID!
++  orderIds: [ID!]!
++}
++
++type AssignmentResult {
++  """Number of orders successfully updated."""
++  count: Int!
++}
++
+ type Cart {
+   id: ID!
+   items: [CartItem!]!
+   subtotal: Int!
+   totalQuantity: Int!
++  userId: String!
+ }
+ 
+ type CartItem {
+@@ -31,6 +42,11 @@ type Category {
+   products: [Product!]
+ }
+ 
++input CheckoutInput {
++  currency: String
++  shippingAddress: ShippingAddressInput!
++}
++
+ input CreateCategoryInput {
+   name: String!
+ }
+@@ -66,6 +82,10 @@ A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date
+ """
+ scalar DateTime
+ 
++input DispatchOrdersInput {
++  orderIds: [ID!]!
++}
++
+ type Favorite {
+   createdAt: DateTime!
+   id: ID!
+@@ -82,6 +102,17 @@ type Mutation {
+   addItemToCart(input: AddToCartInput!): Cart!
+   addProductImage(input: AddImageInput!, productId: ID!): Image!
+   addProductVariant(id: ID!, input: CreateVariantInput!): Variant!
++
++  """
++  Manager assigns PAID orders to a delivery person, moving them to PROCESSING status.
++  """
++  assignOrdersToDelivery(input: AssignOrdersInput!): AssignmentResult!
++
++  """Cancel an order."""
++  cancelOrder(id: ID!): Order!
++
++  """Create order from cart and return Stripe PaymentIntent client secret."""
++  checkout(input: CheckoutInput!): PaymentIntentResult!
+   clearCart: Cart!
+   createCategory(input: CreateCategoryInput!): Category!
+   createProduct(input: CreateProductInput!): Product!
+@@ -92,8 +123,14 @@ type Mutation {
+   deleteProductVariant(id: ID!): Variant!
+   disableProduct(id: ID!): Product!
+   disablePromoCode(id: ID!): PromoCode!
++
++  """Manager dispatches PROCESSING orders, moving them to SHIPPED status."""
++  dispatchOrders(input: DispatchOrdersInput!): AssignmentResult!
+   enableProduct(id: ID!): Product!
+   enablePromoCode(id: ID!): PromoCode!
++
++  """Delivery person marks a single assigned SHIPPED order as DELIVERED."""
++  markOrderAsDelivered(orderId: ID!): Order!
+   removeItemFromCart(id: ID!): Cart!
+   toggleFavorite(variantId: ID!): Boolean!
+   updateCartItemQuantity(id: ID!, input: UpdateCartItemInput!): Cart!
+@@ -103,6 +140,58 @@ type Mutation {
+   updatePromoCode(id: ID!, input: UpdatePromoCodeInput!): PromoCode!
+ }
+ 
++type Order {
++  createdAt: DateTime!
++  deliveryPersonId: String
++  discountAmount: Int!
++  id: ID!
++  items: [OrderItem!]!
++  payments: [Payment!]!
++  promoCode: String
++  shippingAddress: ShippingAddress!
++  status: OrderStatus!
++  subtotal: Int!
++  totalAmount: Int!
++  userId: String
++}
++
++input OrderFilterInput {
++  fromDate: DateTime
++  maxAmount: Int
++  minAmount: Int
++  status: OrderStatus
++  toDate: DateTime
++}
++
++type OrderItem {
++  id: ID!
++  price: Int!
++  productTitle: String!
++  quantity: Int!
++  total: Int!
++  variantTitle: String!
++}
++
++enum OrderStatus {
++  CANCELLED
++  DELIVERED
++  PAID
++  PENDING
++  PROCESSING
++  REFUNDED
++  SHIPPED
++}
++
++type PaginatedOrders {
++  hasNextPage: Boolean!
++  hasPreviousPage: Boolean!
++  items: [Order!]!
++  limit: Int!
++  page: Int!
++  totalItems: Int!
++  totalPages: Int!
++}
++
+ type PaginatedProducts {
+   hasNextPage: Boolean!
+   hasPreviousPage: Boolean!
+@@ -113,6 +202,33 @@ type PaginatedProducts {
+   totalPages: Int!
+ }
+ 
++type Payment {
++  amount: Int!
++  createdAt: DateTime!
++  id: ID!
++  paymentMethod: PaymentMethod!
++  status: PaymentStatus!
++}
++
++type PaymentIntentResult {
++  """The final charged amount in cents"""
++  amount: Int!
++  clientSecret: String!
++  orderId: ID!
++}
++
++enum PaymentMethod {
++  PAYMENT_INTENT
++  PAYMENT_LINK
++}
++
++enum PaymentStatus {
++  FAILED
++  PENDING
++  REFUNDED
++  SUCCEEDED
++}
++
+ type Product {
+   categories: [Category!]!
+   createdAt: DateTime
+@@ -162,6 +278,14 @@ type Query {
+   categories: [Category!]!
+   myCart: Cart!
+   myFavorites: [Favorite!]!
++
++  """Get a specific order by ID."""
++  order(id: ID!): Order!
++
++  """
++  Get paginated orders. Clients see own, Managers see all, Delivery sees shipped assigned.
++  """
++  orders(filter: OrderFilterInput, limit: Int! = 20, offset: Int! = 0): PaginatedOrders!
+   product(id: ID!): Product
+   products(categoryId: ID, limit: Int! = 15, page: Int! = 1): PaginatedProducts!
+   promoCodes: [PromoCode!]!
+@@ -177,6 +301,20 @@ input SelectedOptionInput {
+   value: String!
+ }
+ 
++type ShippingAddress {
++  addressLine: String!
++  city: String!
++  country: String!
++  postalCode: String!
++}
++
++input ShippingAddressInput {
++  addressLine: String!
++  city: String!
++  country: String!
++  postalCode: String!
++}
++
+ input UpdateCartItemInput {
+   quantity: Int!
+ }
+@@ -211,6 +349,7 @@ type Variant {
+   id: ID!
+   image: String
+   isFavorite: Boolean!
++  paymentLinkUrl: String
+   price: Int!
+   product: Product!
+   selectedOptions: [SelectedOption!]!

@@ -6,6 +6,8 @@ export class Cart {
   @Field(() => ID)
   id: string;
 
+  userId: string;
+
   @Field(() => [CartItem])
   items: CartItem[];
 

@@ -11,11 +11,22 @@ input AddToCartInput {
   variantId: ID!
 }
 
+input AssignOrdersInput {
+  deliveryPersonId: ID!
+  orderIds: [ID!]!
+}
+
+type AssignmentResult {
+  """Number of orders successfully updated."""
+  count: Int!
+}
+
 type Cart {
   id: ID!
   items: [CartItem!]!
   subtotal: Int!
   totalQuantity: Int!
+  userId: String!
 }
 
 type CartItem {
@@ -29,6 +40,11 @@ type Category {
   id: ID!
   name: String!
   products: [Product!]
+}
+
+input CheckoutInput {
+  currency: String
+  shippingAddress: ShippingAddressInput!
 }
 
 input CreateCategoryInput {
@@ -66,6 +82,10 @@ A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date
 """
 scalar DateTime
 
+input DispatchOrdersInput {
+  orderIds: [ID!]!
+}
+
 type Favorite {
   createdAt: DateTime!
   id: ID!
@@ -82,6 +102,17 @@ type Mutation {
   addItemToCart(input: AddToCartInput!): Cart!
   addProductImage(input: AddImageInput!, productId: ID!): Image!
   addProductVariant(id: ID!, input: CreateVariantInput!): Variant!
+
+  """
+  Manager assigns PAID orders to a delivery person, moving them to PROCESSING status.
+  """
+  assignOrdersToDelivery(input: AssignOrdersInput!): AssignmentResult!
+
+  """Cancel an order."""
+  cancelOrder(id: ID!): Order!
+
+  """Create order from cart and return Stripe PaymentIntent client secret."""
+  checkout(input: CheckoutInput!): PaymentIntentResult!
   clearCart: Cart!
   createCategory(input: CreateCategoryInput!): Category!
   createProduct(input: CreateProductInput!): Product!
@@ -92,8 +123,14 @@ type Mutation {
   deleteProductVariant(id: ID!): Variant!
   disableProduct(id: ID!): Product!
   disablePromoCode(id: ID!): PromoCode!
+
+  """Manager dispatches PROCESSING orders, moving them to SHIPPED status."""
+  dispatchOrders(input: DispatchOrdersInput!): AssignmentResult!
   enableProduct(id: ID!): Product!
   enablePromoCode(id: ID!): PromoCode!
+
+  """Delivery person marks a single assigned SHIPPED order as DELIVERED."""
+  markOrderAsDelivered(orderId: ID!): Order!
   removeItemFromCart(id: ID!): Cart!
   toggleFavorite(variantId: ID!): Boolean!
   updateCartItemQuantity(id: ID!, input: UpdateCartItemInput!): Cart!
@@ -101,6 +138,58 @@ type Mutation {
   updateProduct(id: ID!, input: UpdateProductInput!): Product!
   updateProductVariant(id: ID!, input: UpdateVariantInput!): Variant!
   updatePromoCode(id: ID!, input: UpdatePromoCodeInput!): PromoCode!
+}
+
+type Order {
+  createdAt: DateTime!
+  deliveryPersonId: String
+  discountAmount: Int!
+  id: ID!
+  items: [OrderItem!]!
+  payments: [Payment!]!
+  promoCode: String
+  shippingAddress: ShippingAddress!
+  status: OrderStatus!
+  subtotal: Int!
+  totalAmount: Int!
+  userId: String
+}
+
+input OrderFilterInput {
+  fromDate: DateTime
+  maxAmount: Int
+  minAmount: Int
+  status: OrderStatus
+  toDate: DateTime
+}
+
+type OrderItem {
+  id: ID!
+  price: Int!
+  productTitle: String!
+  quantity: Int!
+  total: Int!
+  variantTitle: String!
+}
+
+enum OrderStatus {
+  CANCELLED
+  DELIVERED
+  PAID
+  PENDING
+  PROCESSING
+  REFUNDED
+  SHIPPED
+}
+
+type PaginatedOrders {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  items: [Order!]!
+  limit: Int!
+  page: Int!
+  totalItems: Int!
+  totalPages: Int!
 }
 
 type PaginatedProducts {
@@ -111,6 +200,33 @@ type PaginatedProducts {
   page: Int!
   totalItems: Int!
   totalPages: Int!
+}
+
+type Payment {
+  amount: Int!
+  createdAt: DateTime!
+  id: ID!
+  paymentMethod: PaymentMethod!
+  status: PaymentStatus!
+}
+
+type PaymentIntentResult {
+  """The final charged amount in cents"""
+  amount: Int!
+  clientSecret: String!
+  orderId: ID!
+}
+
+enum PaymentMethod {
+  PAYMENT_INTENT
+  PAYMENT_LINK
+}
+
+enum PaymentStatus {
+  FAILED
+  PENDING
+  REFUNDED
+  SUCCEEDED
 }
 
 type Product {
@@ -162,6 +278,14 @@ type Query {
   categories: [Category!]!
   myCart: Cart!
   myFavorites: [Favorite!]!
+
+  """Get a specific order by ID."""
+  order(id: ID!): Order!
+
+  """
+  Get paginated orders. Clients see own, Managers see all, Delivery sees shipped assigned.
+  """
+  orders(filter: OrderFilterInput, limit: Int! = 20, offset: Int! = 0): PaginatedOrders!
   product(id: ID!): Product
   products(categoryId: ID, limit: Int! = 15, page: Int! = 1): PaginatedProducts!
   promoCodes: [PromoCode!]!
@@ -175,6 +299,20 @@ type SelectedOption {
 input SelectedOptionInput {
   name: String!
   value: String!
+}
+
+type ShippingAddress {
+  addressLine: String!
+  city: String!
+  country: String!
+  postalCode: String!
+}
+
+input ShippingAddressInput {
+  addressLine: String!
+  city: String!
+  country: String!
+  postalCode: String!
 }
 
 input UpdateCartItemInput {
@@ -211,6 +349,7 @@ type Variant {
   id: ID!
   image: String
   isFavorite: Boolean!
+  paymentLinkUrl: String
   price: Int!
   product: Product!
   selectedOptions: [SelectedOption!]!

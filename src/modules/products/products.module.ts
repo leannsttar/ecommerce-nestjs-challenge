@@ -12,9 +12,10 @@ import { OptionsDataLoader } from './loaders/options.dataloader';
 import { VariantsDataLoader } from './loaders/variants.dataloader';
 import { SelectedOptionsDataLoader } from './loaders/selected-options.dataloader';
 import { FavoritesModule } from '../favorites/favorites.module';
+import { StripeModule } from '../stripe/stripe.module';
 
 @Module({
-  imports: [CategoriesModule, CaslModule, FavoritesModule],
+  imports: [CategoriesModule, CaslModule, FavoritesModule, StripeModule],
   providers: [
     ProductsResolver,
     VariantsResolver,

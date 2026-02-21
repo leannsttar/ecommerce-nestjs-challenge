@@ -2,14 +2,21 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { CreateVariantInput } from '../dto/variants/create-variant.input';
 import { UpdateVariantInput } from '../dto/variants/update-variant.input';
+import { StripeService } from '../../stripe/stripe.service';
 
 @Injectable()
 export class ProductVariantsService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(ProductVariantsService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly stripe: StripeService,
+  ) {}
 
   async addVariant(productId: string, input: CreateVariantInput) {
     const product = await this.prisma.product.findFirst({
@@ -55,7 +62,7 @@ export class ProductVariantsService {
       }
     }
 
-    return this.prisma.$transaction(async (tx) => {
+    const variantResult = await this.prisma.$transaction(async (tx) => {
       const optionValueIds: string[] = [];
       for (const selected of input.selectedOptions) {
         const valueKey = `${selected.name}:${selected.value}`;
@@ -113,7 +120,7 @@ export class ProductVariantsService {
         }
       }
 
-      return tx.productVariant.create({
+      const variant = await tx.productVariant.create({
         data: {
           productId,
           sku: input.sku,
@@ -127,11 +134,80 @@ export class ProductVariantsService {
           },
         },
       });
+
+      return variant;
+    });
+
+    // After DB creation, sync with Stripe.
+    // We do this OUTSIDE the DB transaction because Stripe calls are external
+    // and cannot be rolled back. If Stripe fails, the variant exists in our DB
+    // without Stripe IDs, which is recoverable (can retry Stripe sync separately).
+    const productResult = await this.prisma.product.findUnique({
+      where: { id: productId },
+    });
+
+    /**
+     * 📖 STRIPE SYNC: Create Price and Payment Link per Variant
+     *
+     * A Price is linked to the Stripe Product (via stripeProductId).
+     * A Payment Link wraps the Price into a shareable checkout URL.
+     *
+     * If the product has no stripeProductId yet (e.g., Stripe was down during
+     * product creation), we skip Stripe sync gracefully.
+     */
+    if (productResult?.stripeProductId) {
+      try {
+        const stripePrice = await this.stripe.createPrice({
+          stripeProductId: productResult.stripeProductId,
+          unitAmount: variantResult.price,
+          metadata: { variantId: variantResult.id },
+        });
+
+        const stripePaymentLink = await this.stripe.createPaymentLink({
+          stripePriceId: stripePrice.id,
+          variantId: variantResult.id,
+        });
+
+        // Update the variant record with Stripe IDs
+        await this.prisma.productVariant.update({
+          where: { id: variantResult.id },
+          data: {
+            stripePriceId: stripePrice.id,
+            stripePaymentLinkId: stripePaymentLink.id,
+            paymentLinkUrl: stripePaymentLink.url,
+          },
+        });
+      } catch (err) {
+        this.logger.error(
+          `Failed to sync variant ${variantResult.id} with Stripe: ${err.message}`,
+        );
+      }
+    }
+
+    return this.prisma.productVariant.findUnique({
+      where: { id: variantResult.id },
     });
   }
 
+  /**
+   * Update a variant. If the price changes, we must deactivate the old
+   * Stripe Price and Payment Link and create new ones.
+   *
+   * 📖 WHY THE OLD PRICE MUST BE DEACTIVATED:
+   * Stripe Prices are immutable. You cannot change '$20' to '$25' on the same
+   * Price object. Instead you create a new Price and archive the old one.
+   * The Payment Link also needs to be recreated because it references a specific Price.
+   */
   async updateVariant(variantId: string, input: UpdateVariantInput) {
-    return this.prisma.productVariant.update({
+    const existing = await this.prisma.productVariant.findFirst({
+      where: { id: variantId, deletedAt: null },
+      include: { product: true },
+    });
+    if (!existing) {
+      throw new NotFoundException(`Variant ${variantId} not found`);
+    }
+
+    const updated = await this.prisma.productVariant.update({
       where: { id: variantId },
       data: {
         sku: input.sku,
@@ -140,8 +216,61 @@ export class ProductVariantsService {
         image: input.image,
       },
     });
+
+    // Stripe sync: if price changed, rotate Price and Payment Link
+    const priceChanged =
+      input.price !== undefined && input.price !== existing.price;
+
+    if (priceChanged && existing.product.stripeProductId) {
+      try {
+        // Step 1: Deactivate old Price and Payment Link
+        if (existing.stripePriceId) {
+          await this.stripe.deactivatePrice(existing.stripePriceId);
+        }
+        if (existing.stripePaymentLinkId) {
+          await this.stripe.deactivatePaymentLink(existing.stripePaymentLinkId);
+        }
+
+        // Step 2: Create new Price
+        const newPrice = await this.stripe.createPrice({
+          stripeProductId: existing.product.stripeProductId,
+          unitAmount: updated.price,
+          metadata: { variantId },
+        });
+
+        // Step 3: Create new Payment Link
+        const newPaymentLink = await this.stripe.createPaymentLink({
+          stripePriceId: newPrice.id,
+          variantId,
+        });
+
+        // Step 4: Update DB with new Stripe IDs
+        await this.prisma.productVariant.update({
+          where: { id: variantId },
+          data: {
+            stripePriceId: newPrice.id,
+            stripePaymentLinkId: newPaymentLink.id,
+            paymentLinkUrl: newPaymentLink.url,
+          },
+        });
+      } catch (err) {
+        this.logger.error(
+          `Failed to rotate Stripe price for variant ${variantId}: ${err.message}`,
+        );
+      }
+    }
+
+    return this.prisma.productVariant.findUnique({
+      where: { id: variantId },
+    });
   }
 
+  /**
+   * Soft-delete a variant. Deactivates Stripe Price and Payment Link.
+   *
+   * 📖 After deactivation the Payment Link URL no longer works, preventing
+   * customers from purchasing a deleted variant via the shareable link.
+   */
   async deleteVariant(variantId: string) {
     const variant = await this.prisma.productVariant.findFirst({
       where: { id: variantId, deletedAt: null },
@@ -162,6 +291,26 @@ export class ProductVariantsService {
       throw new BadRequestException(
         'Cannot delete the last active variant. A product must have at least one variant available for sale.',
       );
+    }
+
+    // Deactivate Stripe Price and Payment Link before soft-deleting
+    if (variant.stripePriceId) {
+      try {
+        await this.stripe.deactivatePrice(variant.stripePriceId);
+      } catch (err) {
+        this.logger.warn(
+          `Failed to deactivate Stripe price ${variant.stripePriceId}: ${err.message}`,
+        );
+      }
+    }
+    if (variant.stripePaymentLinkId) {
+      try {
+        await this.stripe.deactivatePaymentLink(variant.stripePaymentLinkId);
+      } catch (err) {
+        this.logger.warn(
+          `Failed to deactivate Stripe payment link ${variant.stripePaymentLinkId}: ${err.message}`,
+        );
+      }
     }
 
     return this.prisma.productVariant.update({
