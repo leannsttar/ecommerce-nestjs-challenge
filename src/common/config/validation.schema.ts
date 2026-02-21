@@ -41,4 +41,7 @@ export const validationSchema = Joi.object({
 
   THROTTLE_LONG_TTL: Joi.number().default(60000),
   THROTTLE_LONG_LIMIT: Joi.number().default(100),
+
+  // redis
+  REDIS_URL: Joi.string().default('redis://localhost:6379'),
 });

@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import { ConfigService } from '@nestjs/config';
 import cookieParser from 'cookie-parser';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
+import { Logger } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -38,6 +39,9 @@ async function bootstrap() {
 
   const port = configService.getOrThrow<number>('app.port');
   await app.listen(port, '0.0.0.0');
-  console.log(`Application is running on: http://localhost:${port}/api`);
+  Logger.log(
+    `Application is running on: http://localhost:${port}/api`,
+    'Bootstrap',
+  );
 }
 bootstrap();

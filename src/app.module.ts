@@ -26,6 +26,8 @@ import { StripeModule } from './modules/stripe/stripe.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { UploadsModule } from './modules/uploads/uploads.module';
+import { BullModule } from '@nestjs/bullmq';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -38,6 +40,14 @@ import { UploadsModule } from './modules/uploads/uploads.module';
         abortEarly: true,
         allowUnknown: true,
       },
+    }),
+    BullModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: async (configService: ConfigService) => ({
+        connection: {
+          url: configService.get('REDIS_URL'),
+        },
+      }),
     }),
     ScheduleModule.forRoot(),
     PrismaModule,
@@ -92,6 +102,7 @@ import { UploadsModule } from './modules/uploads/uploads.module';
     OrdersModule,
     UploadsModule,
     CaslModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [

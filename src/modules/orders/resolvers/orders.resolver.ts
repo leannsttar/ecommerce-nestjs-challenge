@@ -9,7 +9,9 @@ import {
   ID,
 } from '@nestjs/graphql';
 import { ParseUUIDPipe, UseGuards } from '@nestjs/common';
-import { OrdersService } from '../orders.service';
+import { OrderCheckoutService } from '../services/order-checkout.service';
+import { OrderQueryService } from '../services/order-query.service';
+import { OrderManagementService } from '../services/order-management.service';
 import {
   Order,
   PaginatedOrders,
@@ -38,7 +40,9 @@ import { UserRole } from '@prisma/client';
 @Resolver(() => Order)
 export class OrdersResolver {
   constructor(
-    private readonly ordersService: OrdersService,
+    private readonly orderCheckoutService: OrderCheckoutService,
+    private readonly orderQueryService: OrderQueryService,
+    private readonly orderManagementService: OrderManagementService,
     private readonly orderItemsLoader: OrderItemsDataLoader,
     private readonly orderPaymentsLoader: OrderPaymentsDataLoader,
     private readonly caslAbilityFactory: CaslAbilityFactory,
@@ -57,7 +61,7 @@ export class OrdersResolver {
     @Args('input') input: CheckoutInput,
     @CurrentUser() user: { id: string; role: string },
   ) {
-    return this.ordersService.checkout(user.id, input);
+    return this.orderCheckoutService.checkout(user.id, input);
   }
 
   @Mutation(() => AssignmentResult, {
@@ -67,7 +71,7 @@ export class OrdersResolver {
   @UseGuards(AbilitiesGuard)
   @CheckAbilities({ action: Action.Manage, subject: Order })
   async assignOrdersToDelivery(@Args('input') input: AssignOrdersInput) {
-    return this.ordersService.assignOrdersToDelivery(
+    return this.orderManagementService.assignOrdersToDelivery(
       input.orderIds,
       input.deliveryPersonId,
     );
@@ -80,7 +84,7 @@ export class OrdersResolver {
   @UseGuards(AbilitiesGuard)
   @CheckAbilities({ action: Action.Manage, subject: Order })
   async dispatchOrders(@Args('input') input: DispatchOrdersInput) {
-    return this.ordersService.dispatchOrders(input.orderIds);
+    return this.orderManagementService.dispatchOrders(input.orderIds);
   }
 
   @Mutation(() => Order, {
@@ -93,7 +97,7 @@ export class OrdersResolver {
     @Args('orderId', { type: () => ID }, ParseUUIDPipe) orderId: string,
     @CurrentUser() user: { id: string; role: string },
   ) {
-    return this.ordersService.markAsDelivered(orderId, user.id);
+    return this.orderManagementService.markAsDelivered(orderId, user.id);
   }
 
   @Mutation(() => Order, { description: 'Cancel an order.' })
@@ -103,7 +107,7 @@ export class OrdersResolver {
     @Args('id', { type: () => ID }, ParseUUIDPipe) id: string,
     @CurrentUser() user: { id: string; role: string },
   ) {
-    return this.ordersService.cancelOrder(id, user.id, user.role);
+    return this.orderManagementService.cancelOrder(id, user.id, user.role);
   }
 
   // ─────────────────────────────────────────────────
@@ -115,7 +119,7 @@ export class OrdersResolver {
     @Args('id', { type: () => ID }, ParseUUIDPipe) id: string,
     @CurrentUser() user: { id: string; role: string },
   ) {
-    return this.ordersService.findOne(id, user.id, user.role);
+    return this.orderQueryService.findOne(id, user.id, user.role);
   }
 
   @Query(() => PaginatedOrders, {
@@ -129,7 +133,7 @@ export class OrdersResolver {
     @Args('limit', { type: () => Int, defaultValue: 20 }) limit = 20,
     @Args('offset', { type: () => Int, defaultValue: 0 }) offset = 0,
   ) {
-    return this.ordersService.findAll(
+    return this.orderQueryService.findAll(
       user.id,
       user.role,
       filter,

@@ -1,4 +1,9 @@
-import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
+import {
+  CallHandler,
+  ExecutionContext,
+  Injectable,
+  NestInterceptor,
+} from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { Response } from 'express';
@@ -11,11 +16,16 @@ import { AuthResult } from '../types/auth-result.type';
 
 @Injectable()
 export class SetRefreshTokenInterceptor implements NestInterceptor {
-  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     return next.handle().pipe(
-      map((data: any) => {
+      map((data: unknown) => {
         // check if contains refresh token information
-        if (data && 'refreshToken' in data && 'refreshTokenExpirationMs' in data) {
+        if (
+          data &&
+          typeof data === 'object' &&
+          'refreshToken' in data &&
+          'refreshTokenExpirationMs' in data
+        ) {
           const authResult = data as AuthResult;
           const response = context.switchToHttp().getResponse<Response>();
 

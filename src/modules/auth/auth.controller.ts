@@ -1,4 +1,10 @@
-import { Controller, Post, Body, UseInterceptors } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  UseInterceptors,
+  UseGuards,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { SignUpDto } from './dto/signup.dto';
 import { SignInDto } from './dto/signin.dto';
@@ -6,13 +12,14 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { Public } from './decorators/public.decorator';
-import { Throttle } from '@nestjs/throttler';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { GetRefreshToken } from './decorators/get-refresh-token.decorator';
 import { SetRefreshTokenInterceptor } from './interceptors/set-refresh-token.interceptor';
 import { ClearRefreshToken } from './decorators/clear-refresh-token.decorator';
 
 @Controller('auth')
 @UseInterceptors(SetRefreshTokenInterceptor) // sets refresh token as cookie for signup, signin & refresh routes
+@UseGuards(ThrottlerGuard)
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 

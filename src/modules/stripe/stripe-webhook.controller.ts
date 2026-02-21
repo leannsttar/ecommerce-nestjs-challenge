@@ -2,7 +2,7 @@ import { Controller, Post, Req, Res, Headers, Logger } from '@nestjs/common';
 import type { RawBodyRequest } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { StripeService } from './stripe.service';
-import { OrdersService } from '../orders/orders.service';
+import { OrderWebhookService } from '../orders/services/order-webhook.service';
 import Stripe from 'stripe';
 import { Public } from '../auth/decorators/public.decorator';
 
@@ -12,7 +12,7 @@ export class StripeWebhookController {
 
   constructor(
     private readonly stripeService: StripeService,
-    private readonly ordersService: OrdersService,
+    private readonly orderWebhookService: OrderWebhookService,
   ) {}
 
   @Public()
@@ -43,19 +43,19 @@ export class StripeWebhookController {
     try {
       switch (event.type) {
         case 'payment_intent.succeeded':
-          await this.ordersService.handlePaymentIntentSucceeded(
+          await this.orderWebhookService.handlePaymentIntentSucceeded(
             event.data.object as Stripe.PaymentIntent,
           );
           break;
 
         case 'payment_intent.payment_failed':
-          await this.ordersService.handlePaymentIntentFailed(
+          await this.orderWebhookService.handlePaymentIntentFailed(
             event.data.object as Stripe.PaymentIntent,
           );
           break;
 
         case 'checkout.session.completed':
-          await this.ordersService.handleCheckoutSessionCompleted(
+          await this.orderWebhookService.handleCheckoutSessionCompleted(
             event.data.object as Stripe.Checkout.Session,
           );
           break;
