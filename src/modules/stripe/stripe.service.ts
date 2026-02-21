@@ -80,7 +80,7 @@ export class StripeService {
         source: 'payment_link',
       },
       shipping_address_collection: {
-        allowed_countries: ['SV', 'US', 'MX', 'CA', 'GB', 'DE', 'FR', 'ES'],
+        allowed_countries: ['SV', 'US'],
       },
     });
   }
