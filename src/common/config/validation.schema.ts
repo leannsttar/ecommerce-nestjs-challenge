@@ -26,6 +26,12 @@ export const validationSchema = Joi.object({
   STRIPE_SECRET_KEY: Joi.string().required(),
   STRIPE_WEBHOOK_SECRET: Joi.string().required(),
 
+  //aws s3
+  AWS_S3_REGION: Joi.string().required(),
+  AWS_S3_BUCKET: Joi.string().required(),
+  AWS_ACCESS_KEY_ID: Joi.string().required(),
+  AWS_SECRET_ACCESS_KEY: Joi.string().required(),
+
   //rate limit
   THROTTLE_SHORT_TTL: Joi.number().default(1000),
   THROTTLE_SHORT_LIMIT: Joi.number().default(3),

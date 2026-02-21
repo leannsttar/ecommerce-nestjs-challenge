@@ -13,6 +13,7 @@ import { ProductVariantsService } from '../services/product-variants.service';
 import { CreateVariantInput } from '../dto/variants/create-variant.input';
 import { UpdateVariantInput } from '../dto/variants/update-variant.input';
 import { ParseUUIDPipe, UseGuards } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { AbilitiesGuard } from 'src/common/casl/guards/abilities.guard';
 import { CheckAbilities } from 'src/common/casl/decorators/check-abilities.decorator';
 import { Action } from 'src/common/casl/casl-ability.factory';
@@ -25,6 +26,7 @@ export class VariantsResolver {
     private readonly variantsService: ProductVariantsService,
     private readonly selectedOptionsDataLoader: SelectedOptionsDataLoader,
     private readonly isFavoriteDataLoader: IsFavoriteDataLoader,
+    private readonly configService: ConfigService,
   ) {}
 
   @UseGuards(AbilitiesGuard)
@@ -59,6 +61,16 @@ export class VariantsResolver {
   @ResolveField(() => [SelectedOption])
   selectedOptions(@Parent() variant: Variant) {
     return this.selectedOptionsDataLoader.load(variant.id);
+  }
+
+  @ResolveField(() => String, { nullable: true })
+  image(@Parent() variant: Variant) {
+    if (!variant.image) return null;
+    if (variant.image.startsWith('http')) return variant.image;
+
+    const bucket = this.configService.getOrThrow('s3.bucket');
+    const region = this.configService.getOrThrow('s3.region');
+    return `https://${bucket}.s3.${region}.amazonaws.com/${variant.image}`;
   }
 
   //for unauthenticated requests returns false

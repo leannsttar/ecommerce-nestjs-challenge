@@ -15,10 +15,26 @@ export class StripeService {
     });
   }
 
-  async createProduct(params: { name: string; description?: string }) {
+  async createProduct(params: {
+    name: string;
+    description?: string;
+    images?: string[];
+  }) {
     return this.stripe.products.create({
       name: params.name,
       description: params.description,
+      images: params.images,
+    });
+  }
+
+  async updateProduct(
+    stripeProductId: string,
+    params: { name?: string; description?: string; images?: string[] },
+  ) {
+    return this.stripe.products.update(stripeProductId, {
+      name: params.name,
+      description: params.description,
+      images: params.images,
     });
   }
 

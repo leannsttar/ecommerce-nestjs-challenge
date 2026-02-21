@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ProductsResolver } from './resolvers/products.resolver';
 import { VariantsResolver } from './resolvers/variants.resolver';
+import { ImageResolver } from './resolvers/image.resolver';
 import { ProductsService } from './services/products.service';
 import { ProductVariantsService } from './services/product-variants.service';
 import { CategoriesModule } from '../categories/categories.module';
@@ -19,6 +20,7 @@ import { StripeModule } from '../stripe/stripe.module';
   providers: [
     ProductsResolver,
     VariantsResolver,
+    ImageResolver,
     ProductsService,
     ProductVariantsService,
     CategoriesByProductDataLoader,
