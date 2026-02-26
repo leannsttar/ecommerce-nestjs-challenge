@@ -62,5 +62,7 @@ project_architecture.md
 .agents
 /generated/prisma
 .agent
-
+.claude/
+CLAUDE.md
+POSTMAN_DEMO_GUIDE.md
 
