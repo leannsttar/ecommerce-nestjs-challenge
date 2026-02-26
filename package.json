@@ -49,6 +49,7 @@
     "graphql": "^16.12.0",
     "helmet": "^8.1.0",
     "ioredis": "^5.9.3",
+    "jest-mock-extended": "^4.0.0",
     "joi": "^18.0.2",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
