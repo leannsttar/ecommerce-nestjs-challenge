@@ -13,12 +13,6 @@ export class CategoriesService {
     });
   }
 
-  async findByIds(ids: string[]) {
-    return this.prisma.category.findMany({
-      where: { id: { in: ids }, deletedAt: null },
-    });
-  }
-
   async create(input: CreateCategoryInput) {
     return this.prisma.category.create({
       data: input,
@@ -37,13 +31,5 @@ export class CategoriesService {
       where: { id },
       data: { deletedAt: new Date() },
     });
-  }
-
-  async getProducts(categoryId: string) {
-    const productCategories = await this.prisma.productCategory.findMany({
-      where: { categoryId },
-      include: { product: true },
-    });
-    return productCategories.map((pc) => pc.product);
   }
 }
