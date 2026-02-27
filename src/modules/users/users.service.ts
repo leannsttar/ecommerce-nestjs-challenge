@@ -12,17 +12,7 @@ export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(data: Prisma.UserCreateInput): Promise<User> {
-    try {
-      return await this.prisma.user.create({ data });
-    } catch (error) {
-      if (
-        error instanceof PrismaClientKnownRequestError &&
-        error.code === 'P2002'
-      ) {
-        throw new ConflictException('Email already registered');
-      }
-      throw error;
-    }
+    return await this.prisma.user.create({ data });
   }
 
   async findById(id: string): Promise<User> {
