@@ -1,10 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-  Logger,
-  InternalServerErrorException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { CreateProductInput } from '../dto/create-product.input';
 import { UpdateProductInput } from '../dto/update-product.input';
@@ -12,8 +6,6 @@ import { AddImageInput } from '../dto/add-image.input';
 
 @Injectable()
 export class ProductsService {
-  private readonly logger = new Logger(ProductsService.name);
-
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll(
