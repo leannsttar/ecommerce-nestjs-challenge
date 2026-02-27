@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AddToCartInput } from './dto/add-to-cart.input';
@@ -48,6 +49,22 @@ export class CartService {
       );
     }
 
+    // Check if adding this quantity exceeds available stock
+    const existingCartItem = await this.prisma.cartItem.findUnique({
+      where: {
+        userId_productVariantId: { userId, productVariantId: variantId },
+      },
+    });
+
+    const currentQuantity = existingCartItem?.quantity || 0;
+    const newQuantity = currentQuantity + quantity;
+
+    if (newQuantity > variant.stockQuantity) {
+      throw new BadRequestException(
+        `Cannot add ${quantity} items. Only ${variant.stockQuantity - currentQuantity} more available in stock.`,
+      );
+    }
+
     await this.prisma.cartItem.upsert({
       where: {
         userId_productVariantId: { userId, productVariantId: variantId },
@@ -64,14 +81,25 @@ export class CartService {
     cartItemId: string,
     input: UpdateCartItemInput,
   ) {
-    const { count } = await this.prisma.cartItem.updateMany({
-      where: { id: cartItemId, userId },
-      data: { quantity: input.quantity },
+    const cartItem = await this.prisma.cartItem.findUnique({
+      where: { id: cartItemId },
+      include: { productVariant: true },
     });
 
-    if (count === 0) {
+    if (!cartItem || cartItem.userId !== userId) {
       throw new NotFoundException(`Cart item not found`);
     }
+
+    if (input.quantity > cartItem.productVariant.stockQuantity) {
+      throw new BadRequestException(
+        `Cannot update quantity to ${input.quantity}. Only ${cartItem.productVariant.stockQuantity} available in stock.`,
+      );
+    }
+
+    await this.prisma.cartItem.update({
+      where: { id: cartItemId },
+      data: { quantity: input.quantity },
+    });
 
     return this.getCart(userId);
   }
@@ -93,6 +121,11 @@ export class CartService {
       where: { userId },
     });
 
-    return this.getCart(userId);
+    return {
+      id: userId,
+      items: [],
+      totalQuantity: 0,
+      subtotal: 0,
+    };
   }
 }
