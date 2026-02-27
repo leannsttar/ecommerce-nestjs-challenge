@@ -1,5 +1,6 @@
 import {
   Injectable,
+  Logger,
   UnauthorizedException,
   BadRequestException,
 } from '@nestjs/common';
@@ -19,6 +20,8 @@ import { parseDurationToMs } from '../../utils/parse-duration';
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly usersService: UsersService,
     private readonly passwordService: PasswordService,
@@ -66,6 +69,10 @@ export class AuthService {
       await this.refreshTokenService.validateRefreshToken(refreshToken);
     const user = await this.usersService.findById(storedToken.userId);
 
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
     await this.refreshTokenService.revokeRefreshTokenById(storedToken.id);
 
     return this.buildAuthResponse(user.id, user.email, user.role);
@@ -98,7 +105,7 @@ export class AuthService {
         new Date(),
       );
     } catch (error) {
-      console.error('Email sending failed:', error);
+      this.logger.error('Email sending failed', error);
     }
   }
 
@@ -123,7 +130,7 @@ export class AuthService {
     try {
       await this.emailService.sendChangedPasswordEmail(user.email, new Date());
     } catch (error) {
-      console.error('Email sending failed:', error);
+      this.logger.error('Email sending failed', error);
     }
   }
 
@@ -136,7 +143,7 @@ export class AuthService {
       await this.accessTokenService.generateAccessToken(userId, email, role);
     const { token: refreshToken } =
       await this.refreshTokenService.createRefreshToken(userId);
-    const refreshTokenExpiration = this.config.getOrThrow<number>(
+    const refreshTokenExpiration = this.config.getOrThrow<string>(
       'app.refreshTokenExpiration',
     );
     const refreshTokenExpirationMs = parseDurationToMs(refreshTokenExpiration);
