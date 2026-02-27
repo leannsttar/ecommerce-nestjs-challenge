@@ -13,7 +13,7 @@ describe('ResetTokenService', () => {
 
   beforeEach(() => {
     configService = createMock<ConfigService>();
-    configService.getOrThrow.mockReturnValue('1h' as never);
+    configService.getOrThrow.mockReturnValue('1h');
 
     service = new ResetTokenService(configService);
   });
@@ -78,7 +78,7 @@ describe('ResetTokenService', () => {
     });
 
     it('returns a Date in the future relative to the configured duration', () => {
-      configService.getOrThrow.mockReturnValue('1h' as never);
+      configService.getOrThrow.mockReturnValue('1h');
       const before = Date.now();
       const result = service.calculateExpirationDate();
       const after = Date.now();
@@ -126,7 +126,7 @@ describe('ResetTokenService', () => {
     });
 
     it('expiresAt reflects the configured duration', () => {
-      configService.getOrThrow.mockReturnValue('30m' as never);
+      configService.getOrThrow.mockReturnValue('30m');
       const before = Date.now();
       const result = service.createResetTokenData();
       const after = Date.now();

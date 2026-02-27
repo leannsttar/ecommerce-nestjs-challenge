@@ -18,7 +18,7 @@ describe('AccessTokenService', () => {
     configService = createMock<ConfigService>();
 
     jwtService.sign.mockReturnValue('signed.jwt.token');
-    configService.getOrThrow.mockReturnValue('15m' as never);
+    configService.getOrThrow.mockReturnValue('15m');
 
     service = new AccessTokenService(jwtService, configService);
   });
@@ -73,7 +73,7 @@ describe('AccessTokenService', () => {
     ])(
       'converts config value "%s" → expiresIn %i seconds',
       async (configValue, expectedSeconds) => {
-        configService.getOrThrow.mockReturnValue(configValue as never);
+        configService.getOrThrow.mockReturnValue(configValue);
 
         const result = await service.generateAccessToken(userId, email, role);
 
@@ -85,7 +85,7 @@ describe('AccessTokenService', () => {
     );
 
     it('throws when ConfigService returns an invalid duration string', async () => {
-      configService.getOrThrow.mockReturnValue('invalid' as never);
+      configService.getOrThrow.mockReturnValue('invalid');
 
       await expect(
         service.generateAccessToken(userId, email, role),

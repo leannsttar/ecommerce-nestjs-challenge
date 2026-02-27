@@ -20,7 +20,7 @@ describe('RefreshTokenService', () => {
     prisma = mockDeep<PrismaService>();
     configService = createMock<ConfigService>();
 
-    configService.getOrThrow.mockReturnValue('7d' as never);
+    configService.getOrThrow.mockReturnValue('7d');
 
     service = new RefreshTokenService(prisma, configService);
   });
@@ -31,7 +31,7 @@ describe('RefreshTokenService', () => {
     const userId = 'user-uuid-1';
 
     beforeEach(() => {
-      prisma.refreshToken.create.mockResolvedValue({} as never);
+      prisma.refreshToken.create.mockResolvedValue({} as RefreshToken);
     });
 
     it('returns the plain token as a 64-char hex string', async () => {
@@ -86,7 +86,7 @@ describe('RefreshTokenService', () => {
     });
 
     it('sets expiresAt relative to the configured duration', async () => {
-      configService.getOrThrow.mockReturnValue('1h' as never);
+      configService.getOrThrow.mockReturnValue('1h');
       const before = Date.now();
       const result = await service.createRefreshToken(userId);
       const after = Date.now();
@@ -180,7 +180,7 @@ describe('RefreshTokenService', () => {
   describe('revokeRefreshTokenById', () => {
     it('sets revokedAt on the token identified by id', async () => {
       const tokenId = 'rt-uuid-1';
-      prisma.refreshToken.update.mockResolvedValue({} as never);
+      prisma.refreshToken.update.mockResolvedValue({} as RefreshToken);
 
       await service.revokeRefreshTokenById(tokenId);
 
