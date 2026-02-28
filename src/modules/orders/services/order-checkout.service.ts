@@ -1,6 +1,7 @@
 import {
   Injectable,
   BadRequestException,
+  UnprocessableEntityException,
   Logger,
   InternalServerErrorException,
 } from '@nestjs/common';
@@ -62,18 +63,20 @@ export class OrderCheckoutService {
       if (!promo)
         throw new BadRequestException(`Promo code "${code}" does not exist.`);
       if (!promo.isActive)
-        throw new BadRequestException(
+        throw new UnprocessableEntityException(
           `Promo code "${code}" is currently inactive.`,
         );
       if (new Date() > promo.expiresAt)
-        throw new BadRequestException(`Promo code "${code}" has expired.`);
+        throw new UnprocessableEntityException(
+          `Promo code "${code}" has expired.`,
+        );
       if (promo.usageCount >= promo.usageLimit)
-        throw new BadRequestException(
+        throw new UnprocessableEntityException(
           `Promo code "${code}" has reached its usage limit.`,
         );
       if (promo.minPurchase && subtotal < promo.minPurchase) {
         const minDollars = (promo.minPurchase / 100).toFixed(2);
-        throw new BadRequestException(
+        throw new UnprocessableEntityException(
           `This promo code requires a minimum purchase of $${minDollars}.`,
         );
       }
@@ -138,7 +141,7 @@ export class OrderCheckoutService {
                 stockMap.get(i.productVariantId)?.sku ?? i.productVariantId,
             )
             .join(', ');
-          throw new BadRequestException(
+          throw new UnprocessableEntityException(
             `Insufficient stock for variant(s): ${skus}`,
           );
         }

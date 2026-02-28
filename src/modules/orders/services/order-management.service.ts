@@ -3,6 +3,7 @@ import {
   BadRequestException,
   NotFoundException,
   ForbiddenException,
+  UnprocessableEntityException,
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
@@ -29,7 +30,7 @@ export class OrderManagementService {
       order.status === OrderStatus.SHIPPED ||
       order.status === OrderStatus.DELIVERED
     ) {
-      throw new BadRequestException(
+      throw new UnprocessableEntityException(
         'Cannot cancel an order that has already been shipped or delivered.',
       );
     }
@@ -41,7 +42,7 @@ export class OrderManagementService {
 
     return {
       ...cancelled,
-      promoCode: (cancelled.promoSnapshot as any)?.code ?? null,
+      promoCode: (cancelled.promoSnapshot as { code?: string })?.code ?? null,
       shippingAddress: cancelled.shippingAddressSnapshot,
     };
   }
@@ -76,7 +77,7 @@ export class OrderManagementService {
 
     const notPaid = orders.filter((o) => o.status !== OrderStatus.PAID);
     if (notPaid.length > 0) {
-      throw new BadRequestException(
+      throw new UnprocessableEntityException(
         `Only PAID orders can be assigned. These orders are not PAID: ${notPaid.map((o) => o.id).join(', ')}`,
       );
     }
@@ -109,7 +110,7 @@ export class OrderManagementService {
       (o) => o.status !== OrderStatus.PROCESSING,
     );
     if (notProcessing.length > 0) {
-      throw new BadRequestException(
+      throw new UnprocessableEntityException(
         `Only PROCESSING orders can be dispatched. These are not in PROCESSING state: ${notProcessing.map((o) => o.id).join(', ')}`,
       );
     }
@@ -134,7 +135,7 @@ export class OrderManagementService {
     if (!order) throw new NotFoundException(`Order ${orderId} not found`);
 
     if (order.status !== OrderStatus.SHIPPED) {
-      throw new BadRequestException(
+      throw new UnprocessableEntityException(
         `Only SHIPPED orders can be marked as delivered. Current status: ${order.status}`,
       );
     }
@@ -156,7 +157,7 @@ export class OrderManagementService {
 
     return {
       ...updated,
-      promoCode: (updated.promoSnapshot as any)?.code ?? null,
+      promoCode: (updated.promoSnapshot as { code?: string })?.code ?? null,
       shippingAddress: updated.shippingAddressSnapshot,
     };
   }
