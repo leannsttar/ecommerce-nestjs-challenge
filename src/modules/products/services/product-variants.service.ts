@@ -2,8 +2,10 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ConflictException,
   Logger,
 } from '@nestjs/common';
+import { ProductOption, ProductOptionValue } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { CreateVariantInput } from '../dto/variants/create-variant.input';
 import { UpdateVariantInput } from '../dto/variants/update-variant.input';
@@ -54,7 +56,10 @@ export class ProductVariantsService {
       }
     }
 
-    const optionMap = new Map<string, any>();
+    const optionMap = new Map<
+      string,
+      ProductOption & { values: ProductOptionValue[] }
+    >();
     const valueMap = new Map<string, string>();
 
     for (const option of product.productOptions) {
@@ -116,7 +121,7 @@ export class ProductVariantsService {
           const combination = input.selectedOptions
             .map((s) => s.value)
             .join(' / ');
-          throw new BadRequestException(
+          throw new ConflictException(
             `A variant with the combination "${combination}" already exists`,
           );
         }
@@ -144,9 +149,6 @@ export class ProductVariantsService {
     // We do this OUTSIDE the DB transaction because Stripe calls are external
     // and cannot be rolled back. If Stripe fails, the variant exists in our DB
     // without Stripe IDs, which is recoverable (can retry Stripe sync separately).
-    const productResult = await this.prisma.product.findUnique({
-      where: { id: productId },
-    });
 
     /**
      * 📖 STRIPE SYNC: 1 Variant = 1 Stripe Product
@@ -169,7 +171,7 @@ export class ProductVariantsService {
         }
       }
 
-      const variantName = `${productResult?.name} - ${input.selectedOptions
+      const variantName = `${product.name} - ${input.selectedOptions
         .map((o) => o.value)
         .join(' / ')}`;
 
@@ -225,7 +227,6 @@ export class ProductVariantsService {
   async updateVariant(variantId: string, input: UpdateVariantInput) {
     const existing = await this.prisma.productVariant.findFirst({
       where: { id: variantId, deletedAt: null },
-      include: { product: true },
     });
     if (!existing) {
       throw new NotFoundException(`Variant ${variantId} not found`);
@@ -247,12 +248,10 @@ export class ProductVariantsService {
 
     if (existing.stripeProductId) {
       try {
-        const skuChanged =
-          input.sku !== undefined && input.sku !== existing.sku;
         const imageChanged =
           input.image !== undefined && input.image !== existing.image;
 
-        if (skuChanged || imageChanged) {
+        if (imageChanged) {
           let imageUrls: string[] | undefined;
 
           if (updated.image) {
@@ -268,14 +267,8 @@ export class ProductVariantsService {
             }
           }
 
-          // Generate name using new SKU if changed, or keep it generic
-          const variantName = updated.sku
-            ? `Variant - ${updated.sku}`
-            : `Variant`;
-
           await this.stripe.updateProduct(existing.stripeProductId, {
-            name: skuChanged ? variantName : undefined, // Only update name if sku changed to not wipe out earlier generated names
-            images: imageChanged ? imageUrls || [] : undefined,
+            images: imageUrls || [],
           });
         }
 
@@ -351,7 +344,7 @@ export class ProductVariantsService {
     });
 
     if (activeVariantsCount === 1) {
-      throw new BadRequestException(
+      throw new ConflictException(
         'Cannot delete the last active variant. A product must have at least one variant available for sale.',
       );
     }

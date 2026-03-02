@@ -49,6 +49,7 @@
     "graphql": "^16.12.0",
     "helmet": "^8.1.0",
     "ioredis": "^5.9.3",
+    "jest-mock-extended": "^4.0.0",
     "joi": "^18.0.2",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
@@ -60,6 +61,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",
     "@eslint/js": "^9.18.0",
+    "@golevelup/ts-jest": "^1.2.1",
     "@nestjs/cli": "^11.0.0",
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.0.1",
@@ -94,12 +96,18 @@
       "ts"
     ],
     "rootDir": "src",
+    "roots": [
+      "<rootDir>",
+      "<rootDir>/modules/auth",
+      "<rootDir>/modules/users"
+    ],
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
     "collectCoverageFrom": [
-      "**/*.(t|j)s"
+      "**/*.service.ts",
+      "**/parse-duration.ts"
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"

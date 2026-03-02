@@ -22,7 +22,7 @@ export class OrderQueryService {
     if (!order) throw new NotFoundException(`Order ${orderId} not found`);
     return {
       ...order,
-      promoCode: (order.promoSnapshot as any)?.code ?? null,
+      promoCode: (order.promoSnapshot as { code?: string })?.code ?? null,
       shippingAddress: order.shippingAddressSnapshot,
     };
   }
@@ -75,7 +75,7 @@ export class OrderQueryService {
     return {
       items: items.map((order) => ({
         ...order,
-        promoCode: (order.promoSnapshot as any)?.code ?? null,
+        promoCode: (order.promoSnapshot as { code?: string })?.code ?? null,
         shippingAddress: order.shippingAddressSnapshot,
       })),
       page,

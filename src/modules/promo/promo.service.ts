@@ -14,12 +14,6 @@ export class PromoService {
     });
   }
 
-  findById(id: string) {
-    return this.prisma.promoCode.findUniqueOrThrow({
-      where: { id },
-    });
-  }
-
   create(input: CreatePromoCodeInput) {
     if (input.type === PromoType.PERCENTAGE && input.value > 100) {
       throw new BadRequestException('Percentage value cannot exceed 100');
@@ -52,38 +46,31 @@ export class PromoService {
   }
 
   async update(id: string, input: UpdatePromoCodeInput) {
-    if (input.type || input.value) {
-      const promo = await this.findById(id);
-      const type = input.type ?? promo.type;
-      const value = input.value ?? promo.value;
+    const promo = await this.prisma.promoCode.findUniqueOrThrow({
+      where: { id },
+    });
 
-      if (type === PromoType.PERCENTAGE && value > 100) {
-        throw new BadRequestException('Percentage value cannot exceed 100');
-      }
+    const type = input.type ?? promo.type;
+    const value = input.value ?? promo.value;
+    const maxDiscountAmount =
+      input.maxDiscountAmount !== undefined
+        ? input.maxDiscountAmount
+        : promo.maxDiscountAmount;
 
-      // If the resolved type is PERCENTAGE, a cap must exist (either from input or already in DB)
-      if (type === PromoType.PERCENTAGE) {
-        const resolvedCap =
-          input.maxDiscountAmount !== undefined
-            ? input.maxDiscountAmount
-            : promo.maxDiscountAmount;
-        if (!resolvedCap) {
-          throw new BadRequestException(
-            'PERCENTAGE promo codes must have a maxDiscountAmount. Provide one or update the type.',
-          );
-        }
-      }
+    if (type === PromoType.PERCENTAGE && value > 100) {
+      throw new BadRequestException('Percentage value cannot exceed 100');
+    }
 
-      // If updating type to FIXED_AMOUNT, validate that maxDiscountAmount isn't being set
-      if (
-        input.maxDiscountAmount !== undefined &&
-        input.maxDiscountAmount !== null &&
-        type !== PromoType.PERCENTAGE
-      ) {
-        throw new BadRequestException(
-          'maxDiscountAmount can only be set for PERCENTAGE type promo codes.',
-        );
-      }
+    if (type === PromoType.PERCENTAGE && !maxDiscountAmount) {
+      throw new BadRequestException(
+        'PERCENTAGE promo codes must have a maxDiscountAmount.',
+      );
+    }
+
+    if (maxDiscountAmount && type !== PromoType.PERCENTAGE) {
+      throw new BadRequestException(
+        'maxDiscountAmount can only be set for PERCENTAGE type promo codes.',
+      );
     }
 
     return this.prisma.promoCode.update({
@@ -92,7 +79,6 @@ export class PromoService {
         ...input,
         code: input.code?.toUpperCase(),
         expiresAt: input.expiresAt ? new Date(input.expiresAt) : undefined,
-        // Explicitly handle null to allow clearing the cap
         maxDiscountAmount:
           input.maxDiscountAmount !== undefined
             ? input.maxDiscountAmount

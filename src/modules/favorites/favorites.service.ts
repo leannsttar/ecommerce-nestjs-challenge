@@ -26,16 +26,4 @@ export class FavoritesService {
       orderBy: { createdAt: 'desc' },
     });
   }
-
-  //Used by the DataLoader
-  async getFavoritedVariantIds(
-    userId: string,
-    variantIds: readonly string[],
-  ): Promise<Set<string>> {
-    const favorites = await this.prisma.favorite.findMany({
-      where: { userId, variantId: { in: [...variantIds] } },
-      select: { variantId: true },
-    });
-    return new Set(favorites.map((f) => f.variantId));
-  }
 }
