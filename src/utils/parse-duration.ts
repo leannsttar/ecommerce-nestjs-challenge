@@ -1,3 +1,8 @@
+const MS_PER_SECOND = 1000;
+const MS_PER_MINUTE = 60 * MS_PER_SECOND;
+const MS_PER_HOUR = 60 * MS_PER_MINUTE;
+const MS_PER_DAY = 24 * MS_PER_HOUR;
+
 export function parseDurationToMs(duration: string | number): number {
   if (typeof duration === 'number') {
     // already a number
@@ -17,13 +22,13 @@ export function parseDurationToMs(duration: string | number): number {
     case 'ms':
       return value;
     case 's':
-      return value * 1000;
+      return value * MS_PER_SECOND;
     case 'm':
-      return value * 60 * 1000;
+      return value * MS_PER_MINUTE;
     case 'h':
-      return value * 60 * 60 * 1000;
+      return value * MS_PER_HOUR;
     case 'd':
-      return value * 24 * 60 * 60 * 1000;
+      return value * MS_PER_DAY;
     default:
       throw new Error(`Unsupported time unit: ${unit}`);
   }

@@ -1,8 +1,7 @@
 import {
   Injectable,
   NotFoundException,
-  ForbiddenException,
-  BadRequestException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { AddToCartInput } from './dto/add-to-cart.input';
@@ -60,7 +59,7 @@ export class CartService {
     const newQuantity = currentQuantity + quantity;
 
     if (newQuantity > variant.stockQuantity) {
-      throw new BadRequestException(
+      throw new UnprocessableEntityException(
         `Cannot add ${quantity} items. Only ${variant.stockQuantity - currentQuantity} more available in stock.`,
       );
     }
@@ -91,7 +90,7 @@ export class CartService {
     }
 
     if (input.quantity > cartItem.productVariant.stockQuantity) {
-      throw new BadRequestException(
+      throw new UnprocessableEntityException(
         `Cannot update quantity to ${input.quantity}. Only ${cartItem.productVariant.stockQuantity} available in stock.`,
       );
     }

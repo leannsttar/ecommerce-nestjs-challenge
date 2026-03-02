@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   InternalServerErrorException,
+  NotFoundException,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import {
@@ -153,12 +154,12 @@ describe('OrderCheckoutService', () => {
   // ─── Promo code validation ──────────────────────────────────────────────────
 
   describe('checkout — promo code validation', () => {
-    it('should throw BadRequestException when the promo code does not exist', async () => {
+    it('should throw NotFoundException when the promo code does not exist', async () => {
       prisma.promoCode.findUnique.mockResolvedValue(null);
 
       await expect(
         service.checkout(USER_ID, { ...mockInput, promoCode: 'GHOST' }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw UnprocessableEntityException when the promo code is inactive', async () => {

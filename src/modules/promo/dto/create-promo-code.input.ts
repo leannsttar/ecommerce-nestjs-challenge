@@ -9,6 +9,7 @@ import {
   IsOptional,
   MinLength,
   MaxLength,
+  ValidateIf,
 } from 'class-validator';
 import { PromoType } from '../entities/promo-code.entity';
 
@@ -27,6 +28,8 @@ export class CreatePromoCodeInput {
   @Field(() => Int)
   @IsInt()
   @Min(1)
+  @ValidateIf((o) => o.type === PromoType.PERCENTAGE)
+  @Max(100, { message: 'Percentage value cannot exceed 100' })
   value: number;
 
   @Field()

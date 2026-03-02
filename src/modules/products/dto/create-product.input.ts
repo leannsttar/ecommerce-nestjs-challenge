@@ -37,6 +37,7 @@ export class CreateProductInput {
   @Field(() => [String], { nullable: true })
   @IsArray()
   @IsOptional()
+  @IsString({ each: true })
   images?: string[];
 
   // === Variable Product Fields (Mandatory) ===

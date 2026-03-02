@@ -15,32 +15,34 @@ export class PromoService {
   }
 
   create(input: CreatePromoCodeInput) {
-    if (input.type === PromoType.PERCENTAGE && input.value > 100) {
-      throw new BadRequestException('Percentage value cannot exceed 100');
-    }
-
     if (input.type === PromoType.PERCENTAGE && !input.maxDiscountAmount) {
       throw new BadRequestException(
         'PERCENTAGE promo codes must include a maxDiscountAmount',
       );
     }
 
-    if (
-      input.maxDiscountAmount !== undefined &&
-      input.type !== PromoType.PERCENTAGE
-    ) {
+    if (input.maxDiscountAmount != null && input.type !== PromoType.PERCENTAGE) {
       throw new BadRequestException(
         'maxDiscountAmount can only be set for PERCENTAGE type promo codes.',
       );
     }
 
+    const { code, type, value, expiresAt, usageLimit, minPurchase, maxDiscountAmount } = input;
+
+    const normalizedCode = code.toUpperCase();
+    const expiryDate = new Date(expiresAt);
+    const minPurchaseAmount = minPurchase ?? null;
+    const discountCap = maxDiscountAmount ?? null;
+
     return this.prisma.promoCode.create({
       data: {
-        ...input,
-        code: input.code.toUpperCase(),
-        expiresAt: new Date(input.expiresAt),
-        minPurchase: input.minPurchase ?? null,
-        maxDiscountAmount: input.maxDiscountAmount ?? null,
+        code: normalizedCode,
+        type,
+        value,
+        expiresAt: expiryDate,
+        usageLimit,
+        minPurchase: minPurchaseAmount,
+        maxDiscountAmount: discountCap,
       },
     });
   }
@@ -73,16 +75,21 @@ export class PromoService {
       );
     }
 
+    const { code, usageLimit, minPurchase } = input;
+
+    const normalizedCode = code?.toUpperCase();
+    const expiryDate = input.expiresAt ? new Date(input.expiresAt) : undefined;
+
     return this.prisma.promoCode.update({
       where: { id },
       data: {
-        ...input,
-        code: input.code?.toUpperCase(),
-        expiresAt: input.expiresAt ? new Date(input.expiresAt) : undefined,
-        maxDiscountAmount:
-          input.maxDiscountAmount !== undefined
-            ? input.maxDiscountAmount
-            : undefined,
+        code: normalizedCode,
+        type: input.type,
+        value: input.value,
+        expiresAt: expiryDate,
+        usageLimit,
+        minPurchase,
+        maxDiscountAmount: input.maxDiscountAmount,
       },
     });
   }

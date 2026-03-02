@@ -1,6 +1,4 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { jwtConfig } from './common/config/namespaces/jwt.config';
 import { appConfig } from './common/config/namespaces/app.config';
@@ -104,9 +102,8 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     CaslModule,
     NotificationsModule,
   ],
-  controllers: [AppController],
+  controllers: [],
   providers: [
-    AppService,
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,

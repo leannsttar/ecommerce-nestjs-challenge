@@ -1,4 +1,7 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  NotFoundException,
+  UnprocessableEntityException,
+} from '@nestjs/common';
 import { CartItem, ProductVariant } from '@prisma/client';
 import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
 import { CartService } from './cart.service';
@@ -61,9 +64,9 @@ describe('CartService', () => {
   describe('getCart', () => {
     it('computes per-item subtotal as quantity × price', async () => {
       const item = { ...mockCartItemWithVariant, quantity: 3 };
-      prisma.cartItem.findMany.mockResolvedValue(
-        [item] as unknown as CartItem[],
-      );
+      prisma.cartItem.findMany.mockResolvedValue([
+        item,
+      ] as unknown as CartItem[]);
 
       const actual = await service.getCart(USER_ID);
 
@@ -80,9 +83,10 @@ describe('CartService', () => {
         quantity: 4,
         productVariant: { ...mockVariant, id: 'variant-uuid-2', price: 500 }, // 4 × 500 = 2000
       };
-      prisma.cartItem.findMany.mockResolvedValue(
-        [item1, item2] as unknown as CartItem[],
-      );
+      prisma.cartItem.findMany.mockResolvedValue([
+        item1,
+        item2,
+      ] as unknown as CartItem[]);
 
       const actual = await service.getCart(USER_ID);
 
@@ -102,14 +106,14 @@ describe('CartService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('throws BadRequestException when the cumulative quantity (existing + new) would exceed stock', async () => {
+    it('throws UnprocessableEntityException when the cumulative quantity (existing + new) would exceed stock', async () => {
       prisma.productVariant.findFirst.mockResolvedValue(mockVariant); // stock: 10
       prisma.cartItem.findUnique.mockResolvedValue(mockCartItem); // existing qty: 2
 
       // 2 + 9 = 11, exceeds stock of 10
       await expect(
         service.addItem(USER_ID, { variantId: VARIANT_ID, quantity: 9 }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(UnprocessableEntityException);
     });
 
     it('upserts with increment when the variant already exists in the cart', async () => {
@@ -122,7 +126,10 @@ describe('CartService', () => {
 
       expect(prisma.cartItem.upsert).toHaveBeenCalledWith({
         where: {
-          userId_productVariantId: { userId: USER_ID, productVariantId: VARIANT_ID },
+          userId_productVariantId: {
+            userId: USER_ID,
+            productVariantId: VARIANT_ID,
+          },
         },
         update: { quantity: { increment: 3 } },
         create: { userId: USER_ID, productVariantId: VARIANT_ID, quantity: 3 },
@@ -139,7 +146,10 @@ describe('CartService', () => {
 
       expect(prisma.cartItem.upsert).toHaveBeenCalledWith({
         where: {
-          userId_productVariantId: { userId: USER_ID, productVariantId: VARIANT_ID },
+          userId_productVariantId: {
+            userId: USER_ID,
+            productVariantId: VARIANT_ID,
+          },
         },
         update: { quantity: { increment: 1 } },
         create: { userId: USER_ID, productVariantId: VARIANT_ID, quantity: 1 },
@@ -172,21 +182,24 @@ describe('CartService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('throws BadRequestException when the new quantity exceeds available stock', async () => {
+    it('throws UnprocessableEntityException when the new quantity exceeds available stock', async () => {
       prisma.cartItem.findUnique.mockResolvedValue(
         mockCartItemWithVariant as unknown as CartItem,
       ); // stock: 10
 
       await expect(
         service.updateItemQuantity(USER_ID, CART_ITEM_ID, { quantity: 11 }),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(UnprocessableEntityException);
     });
 
     it('updates the cart item with the exact new quantity', async () => {
       prisma.cartItem.findUnique.mockResolvedValue(
         mockCartItemWithVariant as unknown as CartItem,
       );
-      prisma.cartItem.update.mockResolvedValue({ ...mockCartItem, quantity: 5 });
+      prisma.cartItem.update.mockResolvedValue({
+        ...mockCartItem,
+        quantity: 5,
+      });
       prisma.cartItem.findMany.mockResolvedValue([]);
 
       await service.updateItemQuantity(USER_ID, CART_ITEM_ID, { quantity: 5 });
@@ -204,9 +217,9 @@ describe('CartService', () => {
     it('throws NotFoundException when no cart item matches the given id and user', async () => {
       prisma.cartItem.deleteMany.mockResolvedValue({ count: 0 });
 
-      await expect(
-        service.removeItem(USER_ID, CART_ITEM_ID),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.removeItem(USER_ID, CART_ITEM_ID)).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('enforces ownership by scoping the delete to both the item id and the userId', async () => {
@@ -232,7 +245,12 @@ describe('CartService', () => {
       expect(prisma.cartItem.deleteMany).toHaveBeenCalledWith({
         where: { userId: USER_ID },
       });
-      expect(actual).toEqual({ id: USER_ID, items: [], totalQuantity: 0, subtotal: 0 });
+      expect(actual).toEqual({
+        id: USER_ID,
+        items: [],
+        totalQuantity: 0,
+        subtotal: 0,
+      });
       // clearCart knows the result is empty — no need to re-fetch
       expect(prisma.cartItem.findMany).not.toHaveBeenCalled();
     });

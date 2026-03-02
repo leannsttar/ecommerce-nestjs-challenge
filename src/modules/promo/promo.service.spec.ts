@@ -63,19 +63,6 @@ describe('PromoService', () => {
   // ─── create ────────────────────────────────────────────────────────────────
 
   describe('create', () => {
-    it('throws when a PERCENTAGE promo has a value exceeding 100', () => {
-      expect(() =>
-        service.create({
-          code: 'BIG',
-          type: PromoType.PERCENTAGE,
-          value: 101,
-          expiresAt: '2030-12-31',
-          usageLimit: 10,
-          maxDiscountAmount: 1000,
-        }),
-      ).toThrow(new BadRequestException('Percentage value cannot exceed 100'));
-    });
-
     it('throws when a PERCENTAGE promo is created without a maxDiscountAmount cap', () => {
       expect(() =>
         service.create({

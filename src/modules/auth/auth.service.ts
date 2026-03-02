@@ -70,7 +70,7 @@ export class AuthService {
     const user = await this.usersService.findById(storedToken.userId);
 
     if (!user) {
-      throw new UnauthorizedException('User not found');
+      throw new UnauthorizedException('Token is invalid or expired');
     }
 
     await this.refreshTokenService.revokeRefreshTokenById(storedToken.id);

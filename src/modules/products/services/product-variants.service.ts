@@ -249,7 +249,7 @@ export class ProductVariantsService {
     if (existing.stripeProductId) {
       try {
         const imageChanged =
-          input.image !== undefined && input.image !== existing.image;
+          input.image != null && input.image !== existing.image;
 
         if (imageChanged) {
           let imageUrls: string[] | undefined;
@@ -273,7 +273,7 @@ export class ProductVariantsService {
         }
 
         const priceChanged =
-          input.price !== undefined && input.price !== existing.price;
+          input.price != null && input.price !== existing.price;
 
         if (priceChanged) {
           // Step 1: Deactivate old Price and Payment Link

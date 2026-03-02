@@ -15,14 +15,14 @@ export class CategoriesService {
 
   async create(input: CreateCategoryInput) {
     return this.prisma.category.create({
-      data: input,
+      data: { name: input.name },
     });
   }
 
   async update(id: string, input: UpdateCategoryInput) {
     return this.prisma.category.update({
       where: { id },
-      data: input,
+      data: { name: input.name },
     });
   }
 

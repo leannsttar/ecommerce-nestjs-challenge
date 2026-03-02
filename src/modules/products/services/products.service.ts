@@ -82,16 +82,19 @@ export class ProductsService {
     }
 
     return this.prisma.$transaction(async (tx) => {
+      const imagesData =
+        imagesToCreate.length > 0 ? { create: imagesToCreate } : undefined;
+
       const product = await tx.product.create({
         data: {
-          ...productData,
+          name: productData.name,
+          description: productData.description,
           categories: {
             create: categoryIds.map((id) => ({
               category: { connect: { id } },
             })),
           },
-          images:
-            imagesToCreate.length > 0 ? { create: imagesToCreate } : undefined,
+          images: imagesData,
         },
       });
 
@@ -116,19 +119,21 @@ export class ProductsService {
   async update(id: string, input: UpdateProductInput) {
     const { categoryIds, ...updateData } = input;
 
+    const categoriesUpdate = categoryIds
+      ? {
+          deleteMany: {}, // Remove all
+          create: categoryIds.map((catId) => ({
+            category: { connect: { id: catId } },
+          })),
+        }
+      : undefined;
+
     return this.prisma.product.update({
       where: { id },
       data: {
-        ...updateData,
-        // Update categories if provided
-        categories: categoryIds
-          ? {
-              deleteMany: {}, // Remove all
-              create: categoryIds.map((catId) => ({
-                category: { connect: { id: catId } },
-              })),
-            }
-          : undefined,
+        name: updateData.name,
+        description: updateData.description,
+        categories: categoriesUpdate,
       },
     });
   }

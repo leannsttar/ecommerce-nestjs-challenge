@@ -4,6 +4,7 @@ import {
   UnprocessableEntityException,
   Logger,
   InternalServerErrorException,
+  NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { StripeService } from '../../stripe/stripe.service';
@@ -55,13 +56,13 @@ export class OrderCheckoutService {
       Prisma.JsonNull;
 
     if (input.promoCode) {
-      const code = input.promoCode.toUpperCase();
+      const code = input.promoCode;
       const promo = await this.prisma.promoCode.findUnique({
         where: { code },
       });
 
       if (!promo)
-        throw new BadRequestException(`Promo code "${code}" does not exist.`);
+        throw new NotFoundException(`Promo code "${code}" does not exist.`);
       if (!promo.isActive)
         throw new UnprocessableEntityException(
           `Promo code "${code}" is currently inactive.`,
@@ -146,11 +147,13 @@ export class OrderCheckoutService {
           );
         }
 
+        const { addressLine, city, country, postalCode } = input.shippingAddress;
+
         const newOrder = await tx.order.create({
           data: {
             userId,
             status: OrderStatus.PENDING,
-            shippingAddressSnapshot: { ...input.shippingAddress },
+            shippingAddressSnapshot: { addressLine, city, country, postalCode },
             subtotal,
             discountAmount,
             totalAmount,
