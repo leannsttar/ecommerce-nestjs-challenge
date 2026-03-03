@@ -1,26 +1,6 @@
-import { ObjectType, Field, Int } from '@nestjs/graphql';
+import { ObjectType } from '@nestjs/graphql';
+import { Paginated } from '../../../common/pagination/paginated.type';
 import { Product } from './product.entity';
 
 @ObjectType()
-export class PaginatedProducts {
-  @Field(() => [Product])
-  items: Product[];
-
-  @Field(() => Int)
-  page: number;
-
-  @Field(() => Int)
-  limit: number;
-
-  @Field(() => Int)
-  totalItems: number;
-
-  @Field(() => Int)
-  totalPages: number;
-
-  @Field(() => Boolean)
-  hasNextPage: boolean;
-
-  @Field(() => Boolean)
-  hasPreviousPage: boolean;
-}
+export class PaginatedProducts extends Paginated(Product) {}

@@ -8,7 +8,6 @@ export * from './order.enums';
 export * from './shipping-address.entity';
 export * from './order-item.entity';
 export * from './payment.entity';
-export * from './paginated-orders.entity';
 export * from './payment-intent-result.entity';
 export * from './assignment-result.entity';
 

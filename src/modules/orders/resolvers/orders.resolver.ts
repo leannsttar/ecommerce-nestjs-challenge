@@ -14,12 +14,12 @@ import { OrderQueryService } from '../services/order-query.service';
 import { OrderManagementService } from '../services/order-management.service';
 import {
   Order,
-  PaginatedOrders,
   PaymentIntentResult,
   OrderItem,
   Payment,
   AssignmentResult,
 } from '../entities/order.entity';
+import { PaginatedOrders } from '../entities/paginated-orders.entity';
 import { CheckoutInput } from '../dto/checkout.input';
 import { OrderFilterInput } from '../dto/order-filter.input';
 import { AssignAndShipInput } from '../dto/assign-and-ship.input';
