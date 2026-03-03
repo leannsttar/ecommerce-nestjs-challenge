@@ -1,112 +1,142 @@
-# E-Commerce API (Nerdery Challenge)
+# 🛒 E-Commerce API (Nerdery Challenge)
 
-A robust, production-ready E-Commerce API built with NestJS, GraphQL, REST, and PostgreSQL. Features role-based access control, integrated Stripe payments, inventory management with queue-based email notifications, and dynamic promo code functionality.
+✨ **Highlights**
 
-## 🚀 Tech Stack
-
-- **Framework:** NestJS (Node.js)
-- **Language:** TypeScript
-- **Database:** PostgreSQL via Prisma ORM
-- **API Interfaces:** GraphQL & REST
-- **Authentication:** JWT (Access & Refresh tokens)
-- **Authorization:** CASL (Role-Based Access Control)
-- **Payments:** Stripe (Payment Links, Intents, Webhooks)
-- **Queue/Background Jobs:** BullMQ with Redis
-- **File Storage:** AWS S3
-- **Email:** SendGrid
-
-## ✨ Key Features
-
-- **Hybrid API:** Uses REST for Authentication & Webhooks, and GraphQL for Product & Order management.
-- **Role-Based Access:** Distinct capabilities for `MANAGER`, `CLIENT`, and `DELIVERY_PERSON`.
-- **Advanced Pagination & Filtering:** Optimize data fetching with standard pagination limits/offsets and complex filters.
-- **N+1 Query Prevention:** fully integrated GraphQL DataLoaders.
-- **Inventory & Checkout:** Real-time stock validation, automated Stripe refunds on out-of-stock, and dynamic Promo Codes application.
-- **Asynchronous Notifications:** BullMQ worker triggers automated emails when variants hit low stock levels (3 remaining).
+- **Hybrid API**: Integrates **REST** (Auth & Webhooks) with **GraphQL** (Product & Order Management) to deliver optimal performance.
+- **Robust Access Control**: Distinct capabilities for `MANAGER`, `CLIENT`, and `DELIVERY_PERSON` using **CASL** (Role-Based Access Control).
+- **Stripe Payments Integration**: Supports both Payment Links (single item) and Payment Intents (cart-based) with automated webhook reconciliation.
+- **Asynchronous Processing**: **BullMQ** & **Redis** power background jobs, including automated email notifications for low-stock items.
+- **Data Integrity**: **PostgreSQL** via **Prisma ORM**, strict input validation, and DataLoader integration to prevent N+1 query problems.
 
 ---
 
-## 🛠 Project Setup & Installation
+## � Setup & Infrastructure
 
-### 1. Prerequisites
+### Prerequisites
 
 - [Node.js](https://nodejs.org/) (v18+ recommended)
-- [PostgreSQL](https://www.postgresql.org/)
-- [Redis](https://redis.io/) (for BullMQ queues)
-- [Stripe CLI](https://docs.stripe.com/stripe-cli) (for local webhook testing)
+- [Docker](https://www.docker.com/)
+- [Stripe CLI](https://docs.stripe.com/stripe-cli) (for local testing)
 
-### 2. Install Dependencies
+### Docker Workflow
 
-```bash
-npm install
-```
+We use Docker to easily spin up our data and caching layers locally.
 
-### 3. Environment Configuration
-
-Copy the `.env.example` file to create your own configuration:
-
-```bash
-cp .env.example .env
-```
-
-Ensure all variables are filled out. **The app will fail to start if variables are missing** (validated via Joi).
-
-### 4. Infrastructure Setup (Docker)
-
-The project requires PostgreSQL for the database and Redis for the background queues. You can easily start both using the provided Docker Compose file:
+1. Run the following command to start PostgreSQL (port `5434`) and Redis (port `6379`) in the background:
 
 ```bash
 docker-compose up -d
 ```
 
-This will spin up both containers in the background.
+2. Verify that the `ecommerce_db_container` and `ecommerce_redis_container` containers are running.
 
-### 5. Database Initialization
+### Application Setup
 
-Generate the Prisma client and run the migrations to create the tables:
+1. Install dependencies:
+
+```bash
+npm install
+```
+
+2. Create your environment file (see variables below):
+
+```bash
+cp .env.example .env
+```
+
+3. Initialize the database and run the migrations:
 
 ```bash
 npx prisma generate
 npx prisma migrate dev
 ```
 
-### 6. Seeding Users
-
-Since there is no default registration for admin accounts, you must seed the database with initial users (1 Manager, 3 Clients, 2 Delivery Persons) to log in and interact with the application:
+4. Seed the initial users (Manager, Clients, Delivery Persons):
 
 ```bash
-npm run seed-users
+npx prisma db seed
 ```
 
-_(All seeded users have the password: `password123`)_
+_(All seeded accounts use password: `password123`)_
 
 ---
 
-## 🏃‍♂️ Running the Application
+## 🔑 Environment Variables
 
-### Development Mode
+The application strictly validates environment variables on startup. The `.env` file configures the Docker infrastructure and cloud services.
 
-```bash
-npm run start:dev
-```
-
-### Testing Stripe Webhooks Locally
-
-Open a new terminal and forward Stripe events to your local API:
-
-```bash
-stripe listen --forward-to localhost:3000/api/stripe/webhook
-```
-
-_Note the webhook secret output by this command and place it into your `.env` as `STRIPE_WEBHOOK_SECRET`._
+| Variable                          | Description                               | Example Value                                                           |
+| :-------------------------------- | :---------------------------------------- | :---------------------------------------------------------------------- |
+| `NODE_ENV`                        | Environment mode (development/production) | `development`                                                           |
+| `PORT`                            | API server port                           | `3000`                                                                  |
+| `DATABASE_URL`                    | PostgreSQL connection string (Docker)     | `postgresql://postgres:postgres@localhost:5434/ecommerce?schema=public` |
+| `REDIS_URL`                       | Redis connection string (Docker)          | `redis://localhost:6379`                                                |
+| `JWT_SECRET`                      | Secret key for Access Tokens              | `super-secret-key-32-chars-long...`                                     |
+| `JWT_EXPIRATION`                  | Access token expiration time              | `15m`                                                                   |
+| `REFRESH_TOKEN_EXPIRATION`        | Refresh token expiration time             | `7d`                                                                    |
+| `RESET_PASSWORD_TOKEN_EXPIRATION` | Expiration for password reset tokens      | `10m`                                                                   |
+| `CORS_ORIGIN`                     | Allowed CORS origins                      | `*`                                                                     |
+| `AWS_S3_REGION`                   | S3 region for product images              | `your-region`                                                           |
+| `AWS_S3_BUCKET`                   | S3 bucket for product images              | `my-ecommerce-bucket`                                                   |
+| `AWS_ACCESS_KEY_ID`               | AWS access key                            | `your-access-key-id`                                                    |
+| `AWS_SECRET_ACCESS_KEY`           | AWS secret access key                     | `your-secret-access-key`                                                |
+| `SENDGRID_API_KEY`                | SendGrid Email API key                    | `SG....`                                                                |
+| `SENDGRID_FROM_EMAIL`             | Sender email address                      | `your-email@example.com`                                                |
+| `STRIPE_SECRET_KEY`               | Stripe API Secret                         | `sk_test_...`                                                           |
+| `STRIPE_WEBHOOK_SECRET`           | Stripe Webhook Signature key              | `whsec_...`                                                             |
+| `THROTTLE_SHORT_TTL`              | Short rate limit burst window (ms)        | `1000`                                                                  |
+| `THROTTLE_SHORT_LIMIT`            | Short rate limit max requests             | `3`                                                                     |
 
 ---
 
-## 🏗 Architecture Overview
+## 🏗️ Architecture & Technical Detail
 
-The codebase strictly adheres to modular, clean architecture principles:
+The codebase adheres strictly to modular, clean architecture principles.
 
-- `src/modules/*`: Domain-specific modules (Products, Orders, Stripes, Auth).
-- `src/common/*`: Cross-cutting concerns like global exception filters, CASL factories, and rate limiting decorators.
-- **Data Loaders**: Avoids N+1 problems in GraphQL relations (e.g., retrieving variants for products).
-- **Validation Pipes**: Ensures robust input validation using `class-validator` across all endpoints and resolvers.
+### System Architecture
+
+- **Controllers & Resolvers**: Handle incoming REST routes (Auth, Webhooks) and GraphQL queries/mutations. They delegate business logic to services.
+- **Services**: Contain the core business rules. They interact with data repositories, caching layers, and external providers (Stripe, AWS).
+- **Repositories (Prisma ORM)**: The data access layer. Services query the PostgreSQL database via the Prisma Client.
+- **Caching & Queues**: **Redis** is utilized by **BullMQ** to offload heavy tasks (e.g., low-stock email notifications) from the main event loop, ensuring fast API responses.
+
+### 📦 Order Lifecycle Logic
+
+Orders follow a strict state machine, enforced by CASL permissions and specific mutators.
+
+`PENDING` ➔ `PAID` ➔ `PROCESSING` ➔ `SHIPPED` ➔ `DELIVERED`
+_(Orders can transition to `CANCELLED` prior to shipping)._
+
+**Key State Transitions:**
+
+- **`PENDING` ➔ `PAID`**: Triggered asynchronously via Stripe Webhook when a checkout session completes.
+- **`PAID` ➔ `PROCESSING`**: Manager verifies and prepares the order.
+- **`PROCESSING` ➔ `SHIPPED`**: Triggered via the `assignAndShipOrders` mutation. The Manager assigns an order to a specific Delivery Person, which immediately advances the status to `SHIPPED`.
+- **`SHIPPED` ➔ `DELIVERED`**: The assigned Delivery Person finalizes the delivery.
+
+---
+
+## 🛠️ Development Workflow
+
+- **AI Collaborator**: We actively use **Antigravity** as our AI software engineering collaborator for maintaining codebase standards, refactoring code, and improving documentation.
+- **GitFlow**:
+  - `main`: Production-ready code.
+  - `develop`: Pre-production integration branch.
+  - `feature/*`: Active development branches for new capabilities.
+
+---
+
+## 🤝 Contributor Considerations
+
+- **Client-First Design**: Build APIs, features, and data structures based on how they will be consumed by the frontend—not how they are stored.
+- **Refactoring Priorities**: Follow SOLID principles. Keep services focused and maintain modular boundaries.
+- **Running Tests**: Tests are configured to run against the Docker infrastructure. Spin up the containers first with `docker-compose up -d`.
+  - Unit Tests: `npm run test`
+  - Coverage: `npm run test:cov`
+  - E2E Tests: `npm run test:e2e`
+
+---
+
+## 📚 Additional Resources
+
+- **[Unit Testing Strategy](./unit_testing_strategy.md)**: Comprehensive guidelines for writing scalable tests in this repository.
