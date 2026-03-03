@@ -82,18 +82,25 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     status: number;
     message: string;
   } {
+    const modelName =
+      (exception.meta?.modelName as string | undefined) || 'Record';
+    const entityName = modelName.toLowerCase();
+
     switch (exception.code) {
       case 'P2002': // Unique constraint violation
         return {
           status: HttpStatus.CONFLICT,
-          message: 'A record with this data already exists',
+          message: `A ${entityName} with this data already exists`,
         };
       case 'P2025': // Record not found
-        return { status: HttpStatus.NOT_FOUND, message: 'Record not found' };
+        return {
+          status: HttpStatus.NOT_FOUND,
+          message: `${modelName} not found`,
+        };
       case 'P2003': // Foreign key constraint violation
         return {
           status: HttpStatus.BAD_REQUEST,
-          message: 'Related record does not exist',
+          message: `Related ${entityName} does not exist`,
         };
       default:
         return {
