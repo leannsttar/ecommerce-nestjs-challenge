@@ -1,7 +1,7 @@
 import { Injectable, Scope } from '@nestjs/common';
 import DataLoader from 'dataloader';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { Category } from '../../categories/entities/category.entity';
+import { Category } from '../entities/category.entity';
 
 /**
  * Loads categories for a batch of product IDs in a single query.

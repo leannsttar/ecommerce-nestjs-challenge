@@ -26,7 +26,7 @@ import { AbilitiesGuard } from '../../../common/casl/guards/abilities.guard';
 import { CheckAbilities } from '../../../common/casl/decorators/check-abilities.decorator';
 import { Action } from '../../../common/casl/casl-ability.factory';
 
-import { CategoriesByProductDataLoader } from '../loaders/category.dataloader';
+import { CategoriesByProductDataLoader } from '../../categories/loaders/categories-by-product.dataloader';
 import { ImagesDataLoader } from '../loaders/images.dataloader';
 import { FeaturedImageDataLoader } from '../loaders/featured-image.dataloader';
 import { OptionsDataLoader } from '../loaders/options.dataloader';
@@ -50,7 +50,7 @@ export class ProductsResolver {
   findAll(
     @Args('limit', { type: () => Int, defaultValue: 15 }) limit: number,
     @Args('page', { type: () => Int, defaultValue: 1 }) page: number,
-    @Args('categoryId', { type: () => ID, nullable: true })
+    @Args('categoryId', { type: () => ID, nullable: true }, ParseUUIDPipe)
     categoryId?: string,
   ) {
     return this.productsService.findAll(limit, page, categoryId);

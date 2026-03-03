@@ -331,7 +331,7 @@ input UpdateCartItemInput {
 }
 
 input UpdateCategoryInput {
-  name: String
+  name: String!
 }
 
 input UpdateProductInput {

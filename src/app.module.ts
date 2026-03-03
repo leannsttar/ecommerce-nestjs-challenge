@@ -47,7 +47,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
         },
       }),
     }),
-    ScheduleModule.forRoot(),
+    // ScheduleModule.forRoot(),
     PrismaModule,
     AuthModule,
     ThrottlerModule.forRootAsync({

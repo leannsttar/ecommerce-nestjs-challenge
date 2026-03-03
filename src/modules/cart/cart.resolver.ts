@@ -75,7 +75,7 @@ export class CartResolver {
   // ─── Field Resolvers ──────────────────────────────────────────────────────────
 
   @ResolveField(() => Variant)
-  variant(@Parent() cartItem: CartItem & { productVariant?: Variant }) {
-    return cartItem.productVariant ?? cartItem.variant;
+  variant(@Parent() cartItem: CartItem & { productVariant: Variant }) {
+    return cartItem.productVariant;
   }
 }
