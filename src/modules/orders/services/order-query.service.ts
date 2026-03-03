@@ -32,9 +32,10 @@ export class OrderQueryService {
     role: string,
     filter?: OrderFilterInput,
     limit = 20,
-    offset = 0,
+    page = 1,
   ) {
-    const page = Math.max(1, Math.floor(offset / limit) + 1);
+    page = Math.max(1, page);
+    const skip = (page - 1) * limit;
     const where: Prisma.OrderWhereInput = {};
 
     if (role === 'CLIENT') {
@@ -65,7 +66,7 @@ export class OrderQueryService {
         where,
         orderBy: { createdAt: 'desc' },
         take: limit,
-        skip: offset,
+        skip,
       }),
       this.prisma.order.count({ where }),
     ]);

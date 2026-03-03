@@ -47,7 +47,34 @@ export class OrderManagementService {
     };
   }
 
-  async assignOrdersToDelivery(
+  async prepareOrder(orderId: string) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+    });
+
+    if (!order) throw new NotFoundException(`Order ${orderId} not found`);
+
+    if (order.status !== OrderStatus.PAID) {
+      throw new UnprocessableEntityException(
+        `Only PAID orders can be prepared. Current status: ${order.status}`,
+      );
+    }
+
+    const updated = await this.prisma.order.update({
+      where: { id: orderId },
+      data: { status: OrderStatus.PROCESSING },
+    });
+
+    this.logger.log(`Manager prepared order ${orderId} for shipping.`);
+
+    return {
+      ...updated,
+      promoCode: (updated.promoSnapshot as { code?: string })?.code ?? null,
+      shippingAddress: updated.shippingAddressSnapshot,
+    };
+  }
+
+  async assignAndShipOrders(
     orderIds: string[],
     deliveryPersonId: string,
   ): Promise<{ count: number }> {
@@ -75,53 +102,22 @@ export class OrderManagementService {
       throw new NotFoundException(`Order(s) not found: ${missing.join(', ')}`);
     }
 
-    const notPaid = orders.filter((o) => o.status !== OrderStatus.PAID);
-    if (notPaid.length > 0) {
-      throw new UnprocessableEntityException(
-        `Only PAID orders can be assigned. These orders are not PAID: ${notPaid.map((o) => o.id).join(', ')}`,
-      );
-    }
-
-    const result = await this.prisma.order.updateMany({
-      where: { id: { in: orderIds } },
-      data: { deliveryPersonId, status: OrderStatus.PROCESSING },
-    });
-
-    this.logger.log(
-      `Manager assigned ${result.count} order(s) to delivery person ${deliveryPersonId}.`,
-    );
-
-    return { count: result.count };
-  }
-
-  async dispatchOrders(orderIds: string[]): Promise<{ count: number }> {
-    const orders = await this.prisma.order.findMany({
-      where: { id: { in: orderIds } },
-      select: { id: true, status: true },
-    });
-
-    if (orders.length !== orderIds.length) {
-      const foundIds = new Set(orders.map((o) => o.id));
-      const missing = orderIds.filter((id) => !foundIds.has(id));
-      throw new NotFoundException(`Order(s) not found: ${missing.join(', ')}`);
-    }
-
     const notProcessing = orders.filter(
       (o) => o.status !== OrderStatus.PROCESSING,
     );
     if (notProcessing.length > 0) {
       throw new UnprocessableEntityException(
-        `Only PROCESSING orders can be dispatched. These are not in PROCESSING state: ${notProcessing.map((o) => o.id).join(', ')}`,
+        `Only PROCESSING orders can be shipped. These orders are not in PROCESSING state: ${notProcessing.map((o) => o.id).join(', ')}`,
       );
     }
 
     const result = await this.prisma.order.updateMany({
       where: { id: { in: orderIds } },
-      data: { status: OrderStatus.SHIPPED },
+      data: { deliveryPersonId, status: OrderStatus.SHIPPED },
     });
 
     this.logger.log(
-      `Manager dispatched ${result.count} order(s) to SHIPPED status.`,
+      `Manager assigned ${result.count} order(s) to delivery person ${deliveryPersonId} and moved them to SHIPPED.`,
     );
 
     return { count: result.count };

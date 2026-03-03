@@ -16,18 +16,15 @@ import {
   Order,
   PaginatedOrders,
   PaymentIntentResult,
-  OrderStatus,
   OrderItem,
   Payment,
   AssignmentResult,
 } from '../entities/order.entity';
 import { CheckoutInput } from '../dto/checkout.input';
 import { OrderFilterInput } from '../dto/order-filter.input';
-import { AssignOrdersInput } from '../dto/assign-orders.input';
-import { DispatchOrdersInput } from '../dto/dispatch-orders.input';
+import { AssignAndShipInput } from '../dto/assign-and-ship.input';
 import { OrderItemsDataLoader } from '../loaders/order-items.dataloader';
 import { OrderPaymentsDataLoader } from '../loaders/order-payments.dataloader';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { AbilitiesGuard } from '../../../common/casl/guards/abilities.guard';
 import { CheckAbilities } from '../../../common/casl/decorators/check-abilities.decorator';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
@@ -64,27 +61,29 @@ export class OrdersResolver {
     return this.orderCheckoutService.checkout(user.id, input);
   }
 
-  @Mutation(() => AssignmentResult, {
+  @Mutation(() => Order, {
     description:
-      'Manager assigns PAID orders to a delivery person, moving them to PROCESSING status.',
+      'Manager marks a single PAID order as PROCESSING (packing stage).',
   })
   @UseGuards(AbilitiesGuard)
   @CheckAbilities({ action: Action.Manage, subject: Order })
-  async assignOrdersToDelivery(@Args('input') input: AssignOrdersInput) {
-    return this.orderManagementService.assignOrdersToDelivery(
-      input.orderIds,
-      input.deliveryPersonId,
-    );
+  async prepareOrder(
+    @Args('orderId', { type: () => ID }, ParseUUIDPipe) orderId: string,
+  ) {
+    return this.orderManagementService.prepareOrder(orderId);
   }
 
   @Mutation(() => AssignmentResult, {
     description:
-      'Manager dispatches PROCESSING orders, moving them to SHIPPED status.',
+      'Manager assigns PROCESSING orders to a delivery person, moving them to SHIPPED status.',
   })
   @UseGuards(AbilitiesGuard)
   @CheckAbilities({ action: Action.Manage, subject: Order })
-  async dispatchOrders(@Args('input') input: DispatchOrdersInput) {
-    return this.orderManagementService.dispatchOrders(input.orderIds);
+  async assignAndShipOrders(@Args('input') input: AssignAndShipInput) {
+    return this.orderManagementService.assignAndShipOrders(
+      input.orderIds,
+      input.deliveryPersonId,
+    );
   }
 
   @Mutation(() => Order, {
@@ -131,14 +130,14 @@ export class OrdersResolver {
     @Args('filter', { type: () => OrderFilterInput, nullable: true })
     filter?: OrderFilterInput,
     @Args('limit', { type: () => Int, defaultValue: 20 }) limit = 20,
-    @Args('offset', { type: () => Int, defaultValue: 0 }) offset = 0,
+    @Args('page', { type: () => Int, defaultValue: 1 }) page = 1,
   ) {
     return this.orderQueryService.findAll(
       user.id,
       user.role,
       filter,
       limit,
-      offset,
+      page,
     );
   }
 

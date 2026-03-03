@@ -11,7 +11,7 @@ input AddToCartInput {
   variantId: ID!
 }
 
-input AssignOrdersInput {
+input AssignAndShipInput {
   deliveryPersonId: ID!
   orderIds: [ID!]!
 }
@@ -84,10 +84,6 @@ A date-time string at UTC, such as 2019-12-03T09:54:33Z, compliant with the date
 """
 scalar DateTime
 
-input DispatchOrdersInput {
-  orderIds: [ID!]!
-}
-
 type Favorite {
   createdAt: DateTime!
   id: ID!
@@ -111,9 +107,9 @@ type Mutation {
   addProductVariant(id: ID!, input: CreateVariantInput!): Variant!
 
   """
-  Manager assigns PAID orders to a delivery person, moving them to PROCESSING status.
+  Manager assigns PROCESSING orders to a delivery person, moving them to SHIPPED status.
   """
-  assignOrdersToDelivery(input: AssignOrdersInput!): AssignmentResult!
+  assignAndShipOrders(input: AssignAndShipInput!): AssignmentResult!
 
   """Cancel an order."""
   cancelOrder(id: ID!): Order!
@@ -130,15 +126,15 @@ type Mutation {
   deleteProductVariant(id: ID!): Variant!
   disableProduct(id: ID!): Product!
   disablePromoCode(id: ID!): PromoCode!
-
-  """Manager dispatches PROCESSING orders, moving them to SHIPPED status."""
-  dispatchOrders(input: DispatchOrdersInput!): AssignmentResult!
   enableProduct(id: ID!): Product!
   enablePromoCode(id: ID!): PromoCode!
   generatePresignedUrl(input: GeneratePresignedUrlInput!): PresignedUrlResponse!
 
   """Delivery person marks a single assigned SHIPPED order as DELIVERED."""
   markOrderAsDelivered(orderId: ID!): Order!
+
+  """Manager marks a single PAID order as PROCESSING (packing stage)."""
+  prepareOrder(orderId: ID!): Order!
   removeItemFromCart(id: ID!): Cart!
   toggleFavorite(variantId: ID!): Boolean!
   updateCartItemQuantity(id: ID!, input: UpdateCartItemInput!): Cart!
@@ -300,9 +296,9 @@ type Query {
   """
   Get paginated orders. Clients see own, Managers see all, Delivery sees shipped assigned.
   """
-  orders(filter: OrderFilterInput, limit: Int! = 20, offset: Int! = 0): PaginatedOrders!
+  orders(filter: OrderFilterInput, limit: Int! = 20, page: Int! = 1): PaginatedOrders!
   product(id: ID!): Product
-  products(categoryId: ID, limit: Int! = 15, offset: Int! = 0): PaginatedProducts!
+  products(categoryId: ID, limit: Int! = 15, page: Int! = 1): PaginatedProducts!
   promoCodes: [PromoCode!]!
 }
 

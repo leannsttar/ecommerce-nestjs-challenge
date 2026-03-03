@@ -145,14 +145,58 @@ describe('OrderManagementService', () => {
     });
   });
 
-  // ─── assignOrdersToDelivery ─────────────────────────────────────────────────
+  // ─── prepareOrder ───────────────────────────────────────────────────────────
 
-  describe('assignOrdersToDelivery', () => {
+  describe('prepareOrder', () => {
+    it('should throw NotFoundException when the order does not exist', async () => {
+      prisma.order.findUnique.mockResolvedValue(null);
+
+      await expect(service.prepareOrder(ORDER_ID)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should throw UnprocessableEntityException when the order is not in PAID status', async () => {
+      prisma.order.findUnique.mockResolvedValue({
+        ...mockOrder,
+        status: OrderStatus.PROCESSING,
+      });
+
+      await expect(service.prepareOrder(ORDER_ID)).rejects.toThrow(
+        UnprocessableEntityException,
+      );
+    });
+
+    it('should transition a PAID order to PROCESSING and map promoCode and shippingAddress', async () => {
+      const paidOrder: Order = { ...mockOrder, status: OrderStatus.PAID };
+      const processingOrder: Order = {
+        ...paidOrder,
+        status: OrderStatus.PROCESSING,
+      };
+
+      prisma.order.findUnique.mockResolvedValue(paidOrder);
+      prisma.order.update.mockResolvedValue(processingOrder);
+
+      const actual = await service.prepareOrder(ORDER_ID);
+
+      expect(prisma.order.update).toHaveBeenCalledWith({
+        where: { id: ORDER_ID },
+        data: { status: OrderStatus.PROCESSING },
+      });
+      expect(actual.status).toBe(OrderStatus.PROCESSING);
+      expect(actual.promoCode).toBe('SUMMER20');
+      expect(actual.shippingAddress).toEqual(mockOrder.shippingAddressSnapshot);
+    });
+  });
+
+  // ─── assignAndShipOrders ────────────────────────────────────────────────────
+
+  describe('assignAndShipOrders', () => {
     it('should throw NotFoundException when the delivery person user does not exist', async () => {
       prisma.user.findUnique.mockResolvedValue(null);
 
       await expect(
-        service.assignOrdersToDelivery([ORDER_ID], DELIVERY_PERSON_ID),
+        service.assignAndShipOrders([ORDER_ID], DELIVERY_PERSON_ID),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -163,52 +207,48 @@ describe('OrderManagementService', () => {
       } as User);
 
       await expect(
-        service.assignOrdersToDelivery([ORDER_ID], DELIVERY_PERSON_ID),
+        service.assignAndShipOrders([ORDER_ID], DELIVERY_PERSON_ID),
       ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw NotFoundException when one or more orderIds are not found in the database', async () => {
       const missingId = 'order-uuid-missing';
       prisma.user.findUnique.mockResolvedValue(mockDeliveryUser as User);
-      // Only returns one of the two requested orders
       prisma.order.findMany.mockResolvedValue([
-        { id: ORDER_ID, status: OrderStatus.PAID },
+        { id: ORDER_ID, status: OrderStatus.PROCESSING },
       ] as Order[]);
 
       await expect(
-        service.assignOrdersToDelivery(
-          [ORDER_ID, missingId],
-          DELIVERY_PERSON_ID,
-        ),
+        service.assignAndShipOrders([ORDER_ID, missingId], DELIVERY_PERSON_ID),
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('should throw UnprocessableEntityException when any order is not in PAID status', async () => {
-      const processingOrderId = 'order-uuid-2';
+    it('should throw UnprocessableEntityException when any order is not in PROCESSING status', async () => {
+      const paidOrderId = 'order-uuid-2';
       prisma.user.findUnique.mockResolvedValue(mockDeliveryUser as User);
       prisma.order.findMany.mockResolvedValue([
-        { id: ORDER_ID, status: OrderStatus.PAID },
-        { id: processingOrderId, status: OrderStatus.PROCESSING },
+        { id: ORDER_ID, status: OrderStatus.PROCESSING },
+        { id: paidOrderId, status: OrderStatus.PAID },
       ] as Order[]);
 
       await expect(
-        service.assignOrdersToDelivery(
-          [ORDER_ID, processingOrderId],
+        service.assignAndShipOrders(
+          [ORDER_ID, paidOrderId],
           DELIVERY_PERSON_ID,
         ),
       ).rejects.toThrow(UnprocessableEntityException);
     });
 
-    it('should assign all PAID orders to the delivery person and return the count', async () => {
+    it('should assign the delivery person and move all PROCESSING orders to SHIPPED, returning the count', async () => {
       const secondOrderId = 'order-uuid-2';
       prisma.user.findUnique.mockResolvedValue(mockDeliveryUser as User);
       prisma.order.findMany.mockResolvedValue([
-        { id: ORDER_ID, status: OrderStatus.PAID },
-        { id: secondOrderId, status: OrderStatus.PAID },
+        { id: ORDER_ID, status: OrderStatus.PROCESSING },
+        { id: secondOrderId, status: OrderStatus.PROCESSING },
       ] as Order[]);
       prisma.order.updateMany.mockResolvedValue({ count: 2 });
 
-      const actual = await service.assignOrdersToDelivery(
+      const actual = await service.assignAndShipOrders(
         [ORDER_ID, secondOrderId],
         DELIVERY_PERSON_ID,
       );
@@ -217,53 +257,8 @@ describe('OrderManagementService', () => {
         where: { id: { in: [ORDER_ID, secondOrderId] } },
         data: {
           deliveryPersonId: DELIVERY_PERSON_ID,
-          status: OrderStatus.PROCESSING,
+          status: OrderStatus.SHIPPED,
         },
-      });
-      expect(actual).toEqual({ count: 2 });
-    });
-  });
-
-  // ─── dispatchOrders ─────────────────────────────────────────────────────────
-
-  describe('dispatchOrders', () => {
-    it('should throw NotFoundException when one or more orderIds are not found', async () => {
-      const missingId = 'order-uuid-missing';
-      // Only one order found for two requested IDs
-      prisma.order.findMany.mockResolvedValue([
-        { id: ORDER_ID, status: OrderStatus.PROCESSING },
-      ] as Order[]);
-
-      await expect(
-        service.dispatchOrders([ORDER_ID, missingId]),
-      ).rejects.toThrow(NotFoundException);
-    });
-
-    it('should throw UnprocessableEntityException when any order is not in PROCESSING status', async () => {
-      const paidOrderId = 'order-uuid-2';
-      prisma.order.findMany.mockResolvedValue([
-        { id: ORDER_ID, status: OrderStatus.PROCESSING },
-        { id: paidOrderId, status: OrderStatus.PAID },
-      ] as Order[]);
-
-      await expect(
-        service.dispatchOrders([ORDER_ID, paidOrderId]),
-      ).rejects.toThrow(UnprocessableEntityException);
-    });
-
-    it('should dispatch all PROCESSING orders to SHIPPED and return the count', async () => {
-      const secondOrderId = 'order-uuid-2';
-      prisma.order.findMany.mockResolvedValue([
-        { id: ORDER_ID, status: OrderStatus.PROCESSING },
-        { id: secondOrderId, status: OrderStatus.PROCESSING },
-      ] as Order[]);
-      prisma.order.updateMany.mockResolvedValue({ count: 2 });
-
-      const actual = await service.dispatchOrders([ORDER_ID, secondOrderId]);
-
-      expect(prisma.order.updateMany).toHaveBeenCalledWith({
-        where: { id: { in: [ORDER_ID, secondOrderId] } },
-        data: { status: OrderStatus.SHIPPED },
       });
       expect(actual).toEqual({ count: 2 });
     });

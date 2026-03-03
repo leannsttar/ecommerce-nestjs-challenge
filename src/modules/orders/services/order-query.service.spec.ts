@@ -162,7 +162,7 @@ describe('OrderQueryService', () => {
     });
 
     it('should properly calculate page metadata for a middle page', async () => {
-      // offset=10, limit=10 -> page 2. 25 items -> 3 pages.
+      // page=2, limit=10. 25 items -> 3 pages.
       prisma.$transaction.mockResolvedValue([[mockOrder], 25] as [
         Order[],
         number,
@@ -173,7 +173,7 @@ describe('OrderQueryService', () => {
         'MANAGER',
         undefined,
         10,
-        10,
+        2,
       );
 
       expect(actual.page).toBe(2);

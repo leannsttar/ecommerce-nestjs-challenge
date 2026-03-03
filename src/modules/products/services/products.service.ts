@@ -10,11 +10,12 @@ export class ProductsService {
 
   async findAll(
     limit: number,
-    offset: number,
+    page: number,
     categoryId?: string,
     includeInactive: boolean = false,
   ) {
-    const pageNumber = Math.max(1, Math.floor(offset / limit) + 1);
+    page = Math.max(1, page);
+    const skip = (page - 1) * limit;
     const where = {
       deletedAt: null,
       isActive: includeInactive ? undefined : true,
@@ -29,7 +30,7 @@ export class ProductsService {
       this.prisma.product.findMany({
         where,
         take: limit,
-        skip: offset,
+        skip,
         orderBy: { createdAt: 'desc' },
       }),
       this.prisma.product.count({ where }),
@@ -39,12 +40,12 @@ export class ProductsService {
 
     return {
       items,
-      page: pageNumber,
+      page: page,
       limit,
       totalItems,
       totalPages,
-      hasNextPage: pageNumber < totalPages,
-      hasPreviousPage: pageNumber > 1,
+      hasNextPage: page < totalPages,
+      hasPreviousPage: page > 1,
     };
   }
 
