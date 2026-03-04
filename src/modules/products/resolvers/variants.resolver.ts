@@ -12,8 +12,9 @@ import { SelectedOption } from '../entities/variants/selected-option.entity';
 import { ProductVariantsService } from '../services/product-variants.service';
 import { CreateVariantInput } from '../dto/variants/create-variant.input';
 import { UpdateVariantInput } from '../dto/variants/update-variant.input';
-import { ParseUUIDPipe, UseGuards } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { ParseUUIDPipe, UseGuards, Inject } from '@nestjs/common';
+import type { ConfigType } from '@nestjs/config';
+import { s3Config } from '../../../common/config/namespaces/s3.config';
 import { AbilitiesGuard } from 'src/common/casl/guards/abilities.guard';
 import { CheckAbilities } from 'src/common/casl/decorators/check-abilities.decorator';
 import { Action } from 'src/common/casl/casl-ability.factory';
@@ -26,7 +27,8 @@ export class VariantsResolver {
     private readonly variantsService: ProductVariantsService,
     private readonly selectedOptionsDataLoader: SelectedOptionsDataLoader,
     private readonly isFavoriteDataLoader: IsFavoriteDataLoader,
-    private readonly configService: ConfigService,
+    @Inject(s3Config.KEY)
+    private readonly s3Configuration: ConfigType<typeof s3Config>,
   ) {}
 
   @UseGuards(AbilitiesGuard)
@@ -68,8 +70,8 @@ export class VariantsResolver {
     if (!variant.image) return null;
     if (variant.image.startsWith('http')) return variant.image;
 
-    const bucket = this.configService.getOrThrow('s3.bucket');
-    const region = this.configService.getOrThrow('s3.region');
+    const bucket = this.s3Configuration.bucket;
+    const region = this.s3Configuration.region;
     return `https://${bucket}.s3.${region}.amazonaws.com/${variant.image}`;
   }
 

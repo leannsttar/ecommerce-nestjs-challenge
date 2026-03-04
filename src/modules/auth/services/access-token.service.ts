@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
+import type { ConfigType } from '@nestjs/config';
+import { jwtConfig } from '../../../common/config/namespaces/jwt.config';
 import { JwtPayload } from '../../../common/interfaces/jwt-payload.interface';
 import { UserRole } from '@prisma/client';
 import { parseDurationToMs } from '../../../utils/parse-duration';
@@ -9,7 +10,8 @@ import { parseDurationToMs } from '../../../utils/parse-duration';
 export class AccessTokenService {
   constructor(
     private readonly jwtService: JwtService,
-    private readonly config: ConfigService,
+    @Inject(jwtConfig.KEY)
+    private readonly jwtConfiguration: ConfigType<typeof jwtConfig>,
   ) {}
 
   async generateAccessToken(
@@ -23,7 +25,7 @@ export class AccessTokenService {
       role,
     };
 
-    const expirationConfig = this.config.getOrThrow<string>('jwt.expiration');
+    const expirationConfig = this.jwtConfiguration.expiration;
     const expirationMs = parseDurationToMs(expirationConfig);
     const expiresInSeconds = Math.floor(expirationMs / 1000);
 

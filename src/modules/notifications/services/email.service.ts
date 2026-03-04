@@ -1,5 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Injectable, Logger, Inject } from '@nestjs/common';
+import type { ConfigType } from '@nestjs/config';
+import { appConfig } from '../../../common/config/namespaces/app.config';
 import sgMail from '@sendgrid/mail';
 
 import { resetPasswordMessage } from '../templates/password-reset.template';
@@ -11,13 +12,12 @@ export class EmailService {
   private readonly logger = new Logger(EmailService.name);
   private readonly fromEmail: string;
 
-  constructor(private readonly configService: ConfigService) {
-    sgMail.setApiKey(
-      this.configService.getOrThrow<string>('app.sendgridApiKey'),
-    );
-    this.fromEmail = this.configService.getOrThrow<string>(
-      'app.sendgridFromEmail',
-    );
+  constructor(
+    @Inject(appConfig.KEY)
+    private readonly appConfiguration: ConfigType<typeof appConfig>,
+  ) {
+    sgMail.setApiKey(this.appConfiguration.sendgridApiKey);
+    this.fromEmail = this.appConfiguration.sendgridFromEmail;
   }
 
   async sendResetPasswordEmail(
@@ -57,7 +57,7 @@ export class EmailService {
       ...stockNotificationMessage(productName, productImage),
     };
 
-    if (this.configService.get('NODE_ENV') !== 'test') {
+    if (this.appConfiguration.environment !== 'test') {
       await sgMail.send(msg);
     } else {
       this.logger.log(`Sending stock notification to: ${email}`);

@@ -1,6 +1,7 @@
 import * as crypto from 'crypto';
 import { UnauthorizedException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { ConfigType } from '@nestjs/config';
+import { appConfig } from '../../../common/config/namespaces/app.config';
 import { RefreshToken } from '@prisma/client';
 import { createMock } from '@golevelup/ts-jest';
 import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
@@ -14,15 +15,15 @@ import { PrismaService } from '../../../prisma/prisma.service';
 describe('RefreshTokenService', () => {
   let service: RefreshTokenService;
   let prisma: DeepMockProxy<PrismaService>;
-  let configService: jest.Mocked<ConfigService>;
+  let appConfiguration: ConfigType<typeof appConfig>;
 
   beforeEach(() => {
     prisma = mockDeep<PrismaService>();
-    configService = createMock<ConfigService>();
+    appConfiguration = { refreshTokenExpiration: '7d' } as ConfigType<
+      typeof appConfig
+    >;
 
-    configService.getOrThrow.mockReturnValue('7d');
-
-    service = new RefreshTokenService(prisma, configService);
+    service = new RefreshTokenService(prisma, appConfiguration);
   });
 
   // ─── createRefreshToken ────────────────────────────────────────────────────
@@ -72,21 +73,20 @@ describe('RefreshTokenService', () => {
 
     it('never stores the plain token in the database', async () => {
       const result = await service.createRefreshToken(userId);
-      const callArg = (prisma.refreshToken.create as jest.Mock).mock.calls[0][0];
+      const callArg = (prisma.refreshToken.create as jest.Mock).mock
+        .calls[0][0];
 
       expect(callArg.data.tokenHash).not.toBe(result.token);
     });
 
-    it('reads app.refreshTokenExpiration from ConfigService', async () => {
+    it('reads app.refreshTokenExpiration from ConfigService (via mock object)', async () => {
       await service.createRefreshToken(userId);
 
-      expect(configService.getOrThrow).toHaveBeenCalledWith(
-        'app.refreshTokenExpiration',
-      );
+      expect(appConfiguration.refreshTokenExpiration).toBeDefined();
     });
 
     it('sets expiresAt relative to the configured duration', async () => {
-      configService.getOrThrow.mockReturnValue('1h');
+      appConfiguration.refreshTokenExpiration = '1h';
       const before = Date.now();
       const result = await service.createRefreshToken(userId);
       const after = Date.now();

@@ -13,7 +13,6 @@ export class StripeHandlerFactory {
     @Inject(STRIPE_HANDLERS_TOKEN)
     private readonly registeredHandlers: StripeEventHandler[],
   ) {
-    // Map them by their event type string for O(1) lookups
     this.registeredHandlers.forEach((handler) => {
       this.handlers.set(handler.eventType, handler);
     });

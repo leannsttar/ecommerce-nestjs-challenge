@@ -10,7 +10,9 @@ import { PrismaService } from '../../../prisma/prisma.service';
 import { CreateVariantInput } from '../dto/variants/create-variant.input';
 import { UpdateVariantInput } from '../dto/variants/update-variant.input';
 import { StripeService } from '../../stripe/stripe.service';
-import { ConfigService } from '@nestjs/config';
+import { Inject } from '@nestjs/common';
+import type { ConfigType } from '@nestjs/config';
+import { s3Config } from '../../../common/config/namespaces/s3.config';
 
 @Injectable()
 export class ProductVariantsService {
@@ -19,7 +21,8 @@ export class ProductVariantsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly stripe: StripeService,
-    private readonly configService: ConfigService,
+    @Inject(s3Config.KEY)
+    private readonly s3Configuration: ConfigType<typeof s3Config>,
   ) {}
 
   async addVariant(productId: string, input: CreateVariantInput) {
@@ -156,8 +159,8 @@ export class ProductVariantsService {
      * its own unique image and SKU at checkout.
      */
     try {
-      const bucket = this.configService.getOrThrow('s3.bucket');
-      const region = this.configService.getOrThrow('s3.region');
+      const bucket = this.s3Configuration.bucket;
+      const region = this.s3Configuration.region;
 
       let imageUrls: string[] | undefined;
       // Reconstruct full S3 URL for Stripe if an image key exists
@@ -255,8 +258,8 @@ export class ProductVariantsService {
           let imageUrls: string[] | undefined;
 
           if (updated.image) {
-            const bucket = this.configService.getOrThrow('s3.bucket');
-            const region = this.configService.getOrThrow('s3.region');
+            const bucket = this.s3Configuration.bucket;
+            const region = this.s3Configuration.region;
 
             if (updated.image.startsWith('http')) {
               imageUrls = [updated.image];

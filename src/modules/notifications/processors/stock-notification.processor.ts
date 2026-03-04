@@ -4,7 +4,9 @@ import { Logger } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { EmailService } from '../services/email.service';
 import { OrderStatus } from '../../orders/entities/order.entity';
-import { ConfigService } from '@nestjs/config';
+import { Inject } from '@nestjs/common';
+import type { ConfigType } from '@nestjs/config';
+import { s3Config } from '../../../common/config/namespaces/s3.config';
 
 @Processor('stock-notifications')
 export class StockNotificationProcessor extends WorkerHost {
@@ -13,7 +15,8 @@ export class StockNotificationProcessor extends WorkerHost {
   constructor(
     private readonly prisma: PrismaService,
     private readonly emailService: EmailService,
-    private readonly configService: ConfigService,
+    @Inject(s3Config.KEY)
+    private readonly s3Configuration: ConfigType<typeof s3Config>,
   ) {
     super();
   }
@@ -62,8 +65,8 @@ export class StockNotificationProcessor extends WorkerHost {
     let productImage = variant.image || '';
 
     if (productImage && !productImage.startsWith('http')) {
-      const bucket = this.configService.getOrThrow('s3.bucket');
-      const region = this.configService.getOrThrow('s3.region');
+      const bucket = this.s3Configuration.bucket;
+      const region = this.s3Configuration.region;
       productImage = `https://${bucket}.s3.${region}.amazonaws.com/${productImage}`;
     }
 

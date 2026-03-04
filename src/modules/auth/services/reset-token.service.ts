@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Injectable, Inject } from '@nestjs/common';
+import type { ConfigType } from '@nestjs/config';
+import { appConfig } from '../../../common/config/namespaces/app.config';
 import * as crypto from 'crypto';
 
 import { parseDurationToMs } from '../../../utils/parse-duration';
@@ -12,7 +13,10 @@ export interface ResetTokenData {
 
 @Injectable()
 export class ResetTokenService {
-  constructor(private readonly config: ConfigService) {}
+  constructor(
+    @Inject(appConfig.KEY)
+    private readonly appConfiguration: ConfigType<typeof appConfig>,
+  ) {}
 
   //returns Object containing plain token (for email), hashed token (for DB), and expiration date
 
@@ -34,7 +38,7 @@ export class ResetTokenService {
 
   calculateExpirationDate(): Date {
     const expirationMs = parseDurationToMs(
-      this.config.getOrThrow<string>('app.resetPasswordTokenExpiration'),
+      this.appConfiguration.resetPasswordTokenExpiration,
     );
     return new Date(Date.now() + expirationMs);
   }

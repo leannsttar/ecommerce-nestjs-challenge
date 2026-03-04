@@ -1,7 +1,7 @@
-import { ConfigService } from '@nestjs/config';
-import { createMock, DeepMocked } from '@golevelup/ts-jest';
+import type { ConfigType } from '@nestjs/config';
 import sgMail from '@sendgrid/mail';
 import { EmailService } from './email.service';
+import { appConfig } from '../../../common/config/namespaces/app.config';
 
 // jest.mock replaces the sgMail module singleton before the service imports it.
 // This is necessary because sgMail is not constructor-injected
@@ -22,17 +22,17 @@ const RECIPIENT = 'customer@example.com';
 
 describe('EmailService', () => {
   let service: EmailService;
-  let configService: DeepMocked<ConfigService>;
+  let appConfiguration: ConfigType<typeof appConfig>;
   const mockSend = sgMail.send as jest.Mock;
 
   beforeEach(() => {
-    configService = createMock<ConfigService>();
+    appConfiguration = {
+      sendgridApiKey: 'sg-test-api-key',
+      sendgridFromEmail: FROM_EMAIL,
+      environment: 'production',
+    } as ConfigType<typeof appConfig>;
 
-    (configService.getOrThrow as jest.Mock)
-      .mockReturnValueOnce('sg-test-api-key')
-      .mockReturnValueOnce(FROM_EMAIL);
-
-    service = new EmailService(configService);
+    service = new EmailService(appConfiguration);
     mockSend.mockResolvedValue([{ statusCode: 202 }, {}]);
   });
 
@@ -75,7 +75,7 @@ describe('EmailService', () => {
 
   describe('sendStockNotificationEmail', () => {
     it('should send an email via sgMail when NODE_ENV is not "test"', async () => {
-      configService.get.mockReturnValue('production');
+      appConfiguration.environment = 'production';
 
       await service.sendStockNotificationEmail(
         RECIPIENT,
@@ -90,7 +90,7 @@ describe('EmailService', () => {
     });
 
     it('should NOT call sgMail.send when NODE_ENV is "test" (prevents real emails in CI)', async () => {
-      configService.get.mockReturnValue('test');
+      appConfiguration.environment = 'test';
 
       await service.sendStockNotificationEmail(
         RECIPIENT,

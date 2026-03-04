@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ConfigModule, ConfigService, ConfigType } from '@nestjs/config';
 import { jwtConfig } from './common/config/namespaces/jwt.config';
 import { appConfig } from './common/config/namespaces/app.config';
 import { rateLimitConfig } from './common/config/namespaces/rate-limit.config';
@@ -51,22 +51,22 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     PrismaModule,
     AuthModule,
     ThrottlerModule.forRootAsync({
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => [
+      inject: [rateLimitConfig.KEY],
+      useFactory: (config: ConfigType<typeof rateLimitConfig>) => [
         {
           name: 'short',
-          ttl: config.getOrThrow<number>('rateLimit.short.ttl'),
-          limit: config.getOrThrow<number>('rateLimit.short.limit'),
+          ttl: config.short.ttl,
+          limit: config.short.limit,
         },
         {
           name: 'medium',
-          ttl: config.getOrThrow<number>('rateLimit.medium.ttl'),
-          limit: config.getOrThrow<number>('rateLimit.medium.limit'),
+          ttl: config.medium.ttl,
+          limit: config.medium.limit,
         },
         {
           name: 'long',
-          ttl: config.getOrThrow<number>('rateLimit.long.ttl'),
-          limit: config.getOrThrow<number>('rateLimit.long.limit'),
+          ttl: config.long.ttl,
+          limit: config.long.limit,
         },
       ],
     }),

@@ -3,8 +3,10 @@ import {
   Logger,
   UnauthorizedException,
   BadRequestException,
+  Inject,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import type { ConfigType } from '@nestjs/config';
+import { appConfig } from '../../common/config/namespaces/app.config';
 import { UsersService } from '../users/users.service';
 import { PasswordService } from './services/password.service';
 import { ResetTokenService } from './services/reset-token.service';
@@ -28,7 +30,8 @@ export class AuthService {
     private readonly resetTokenService: ResetTokenService,
     private readonly refreshTokenService: RefreshTokenService,
     private readonly accessTokenService: AccessTokenService,
-    private readonly config: ConfigService,
+    @Inject(appConfig.KEY)
+    private readonly appConfiguration: ConfigType<typeof appConfig>,
     private readonly emailService: EmailService,
   ) {}
 
@@ -143,9 +146,7 @@ export class AuthService {
       await this.accessTokenService.generateAccessToken(userId, email, role);
     const { token: refreshToken } =
       await this.refreshTokenService.createRefreshToken(userId);
-    const refreshTokenExpiration = this.config.getOrThrow<string>(
-      'app.refreshTokenExpiration',
-    );
+    const refreshTokenExpiration = this.appConfiguration.refreshTokenExpiration;
     const refreshTokenExpirationMs = parseDurationToMs(refreshTokenExpiration);
 
     return { accessToken, expiresIn, refreshToken, refreshTokenExpirationMs };

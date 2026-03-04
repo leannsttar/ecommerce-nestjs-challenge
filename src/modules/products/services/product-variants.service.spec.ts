@@ -7,7 +7,8 @@ import { Product, ProductOptionValue, ProductVariant } from '@prisma/client';
 import Stripe from 'stripe';
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
-import { ConfigService } from '@nestjs/config';
+import type { ConfigType } from '@nestjs/config';
+import { s3Config } from '../../../common/config/namespaces/s3.config';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { StripeService } from '../../stripe/stripe.service';
 import { ProductVariantsService } from './product-variants.service';
@@ -79,13 +80,16 @@ describe('ProductVariantsService', () => {
   let service: ProductVariantsService;
   let prisma: DeepMockProxy<PrismaService>;
   let stripe: DeepMocked<StripeService>;
-  let configService: DeepMocked<ConfigService>;
+  let s3Configuration: ConfigType<typeof s3Config>;
 
   beforeEach(() => {
     prisma = mockDeep<PrismaService>();
     stripe = createMock<StripeService>();
-    configService = createMock<ConfigService>();
-    service = new ProductVariantsService(prisma, stripe, configService);
+    s3Configuration = {
+      bucket: 'test-bucket',
+      region: 'us-east-1',
+    } as ConfigType<typeof s3Config>;
+    service = new ProductVariantsService(prisma, stripe, s3Configuration);
   });
 
   // ─── addVariant ───────────────────────────────────────────────────────────
@@ -125,10 +129,6 @@ describe('ProductVariantsService', () => {
         id: STRIPE_PAYMENT_LINK_ID,
         url: PAYMENT_LINK_URL,
       } as Stripe.Response<Stripe.PaymentLink>);
-
-      (configService.getOrThrow as jest.Mock)
-        .mockReturnValueOnce('test-bucket')
-        .mockReturnValueOnce('us-east-1');
     });
 
     it('throws NotFoundException when the product does not exist', async () => {
@@ -372,10 +372,6 @@ describe('ProductVariantsService', () => {
         image: newImage,
       });
 
-      (configService.getOrThrow as jest.Mock)
-        .mockReturnValueOnce('test-bucket')
-        .mockReturnValueOnce('us-east-1');
-
       await service.updateVariant(VARIANT_ID, { image: newImage });
 
       expect(stripe.updateProduct).toHaveBeenCalledWith(STRIPE_PRODUCT_ID, {
@@ -428,10 +424,6 @@ describe('ProductVariantsService', () => {
         image: newImage,
         price: newPrice,
       });
-      (configService.getOrThrow as jest.Mock)
-        .mockReturnValueOnce('test-bucket')
-        .mockReturnValueOnce('us-east-1');
-
       await service.updateVariant(VARIANT_ID, {
         image: newImage,
         price: newPrice,

@@ -3,7 +3,8 @@ import {
   ConflictException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import type { ConfigType } from '@nestjs/config';
+import { appConfig } from '../../common/config/namespaces/app.config';
 import { RefreshToken, User, UserRole } from '@prisma/client';
 import { createMock } from '@golevelup/ts-jest';
 import { AuthService } from './auth.service';
@@ -56,7 +57,7 @@ describe('AuthService', () => {
   let resetTokenService: jest.Mocked<ResetTokenService>;
   let refreshTokenService: jest.Mocked<RefreshTokenService>;
   let accessTokenService: jest.Mocked<AccessTokenService>;
-  let configService: jest.Mocked<ConfigService>;
+  let appConfiguration: ConfigType<typeof appConfig>;
   let emailService: jest.Mocked<EmailService>;
 
   beforeEach(() => {
@@ -65,7 +66,9 @@ describe('AuthService', () => {
     resetTokenService = createMock<ResetTokenService>();
     refreshTokenService = createMock<RefreshTokenService>();
     accessTokenService = createMock<AccessTokenService>();
-    configService = createMock<ConfigService>();
+    appConfiguration = { refreshTokenExpiration: '7d' } as ConfigType<
+      typeof appConfig
+    >;
     emailService = createMock<EmailService>();
 
     // Default stubs used by buildAuthResponse (called by signUp, signIn, refresh)
@@ -78,7 +81,6 @@ describe('AuthService', () => {
       expiresAt: new Date(),
     });
     // '7d' → 604_800_000 ms — parseDurationToMs runs for real
-    configService.getOrThrow.mockReturnValue('7d');
 
     service = new AuthService(
       usersService,
@@ -86,7 +88,7 @@ describe('AuthService', () => {
       resetTokenService,
       refreshTokenService,
       accessTokenService,
-      configService,
+      appConfiguration,
       emailService,
     );
   });
@@ -405,7 +407,9 @@ describe('AuthService', () => {
 
       await expect(
         service.resetPassword(plainToken, newPassword),
-      ).rejects.toThrow(new BadRequestException('Invalid or expired reset token'));
+      ).rejects.toThrow(
+        new BadRequestException('Invalid or expired reset token'),
+      );
     });
 
     it('looks up the user by the sha256 hash of the supplied token', async () => {

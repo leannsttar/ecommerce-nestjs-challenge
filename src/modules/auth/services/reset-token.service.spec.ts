@@ -1,5 +1,6 @@
 import * as crypto from 'crypto';
-import { ConfigService } from '@nestjs/config';
+import { ConfigType } from '@nestjs/config';
+import { appConfig } from '../../../common/config/namespaces/app.config';
 import { createMock } from '@golevelup/ts-jest';
 import { ResetTokenService } from './reset-token.service';
 
@@ -9,13 +10,14 @@ import { ResetTokenService } from './reset-token.service';
  */
 describe('ResetTokenService', () => {
   let service: ResetTokenService;
-  let configService: jest.Mocked<ConfigService>;
+  let appConfiguration: ConfigType<typeof appConfig>;
 
   beforeEach(() => {
-    configService = createMock<ConfigService>();
-    configService.getOrThrow.mockReturnValue('1h');
+    appConfiguration = {
+      resetPasswordTokenExpiration: '1h',
+    } as ConfigType<typeof appConfig>;
 
-    service = new ResetTokenService(configService);
+    service = new ResetTokenService(appConfiguration);
   });
 
   afterEach(() => {
@@ -44,10 +46,7 @@ describe('ResetTokenService', () => {
   describe('hashResetToken', () => {
     it('returns the sha256 hex digest of the given token', () => {
       const token = 'my-test-token';
-      const expected = crypto
-        .createHash('sha256')
-        .update(token)
-        .digest('hex');
+      const expected = crypto.createHash('sha256').update(token).digest('hex');
 
       expect(service.hashResetToken(token)).toBe(expected);
     });
@@ -69,16 +68,14 @@ describe('ResetTokenService', () => {
   // ─── calculateExpirationDate ───────────────────────────────────────────────
 
   describe('calculateExpirationDate', () => {
-    it('reads app.resetPasswordTokenExpiration from ConfigService', () => {
+    it('reads app.resetPasswordTokenExpiration from instantiated config object', () => {
       service.calculateExpirationDate();
 
-      expect(configService.getOrThrow).toHaveBeenCalledWith(
-        'app.resetPasswordTokenExpiration',
-      );
+      expect(appConfiguration.resetPasswordTokenExpiration).toBeDefined();
     });
 
     it('returns a Date in the future relative to the configured duration', () => {
-      configService.getOrThrow.mockReturnValue('1h');
+      appConfiguration.resetPasswordTokenExpiration = '1h';
       const before = Date.now();
       const result = service.calculateExpirationDate();
       const after = Date.now();
@@ -126,7 +123,7 @@ describe('ResetTokenService', () => {
     });
 
     it('expiresAt reflects the configured duration', () => {
-      configService.getOrThrow.mockReturnValue('30m');
+      appConfiguration.resetPasswordTokenExpiration = '30m';
       const before = Date.now();
       const result = service.createResetTokenData();
       const after = Date.now();

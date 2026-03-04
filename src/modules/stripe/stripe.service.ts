@@ -1,15 +1,17 @@
-import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Injectable, Inject } from '@nestjs/common';
+import type { ConfigType } from '@nestjs/config';
+import { appConfig } from '../../common/config/namespaces/app.config';
 import Stripe from 'stripe';
 
 @Injectable()
 export class StripeService {
   private readonly stripe: Stripe;
 
-  constructor(private readonly config: ConfigService) {
-    this.stripe = new Stripe(config.getOrThrow<string>('app.stripeSecretKey'), {
-      // Always pin the API version! This prevents breaking changes from
-      // Stripe's automatic upgrades affecting your production app.
+  constructor(
+    @Inject(appConfig.KEY)
+    private readonly appConfiguration: ConfigType<typeof appConfig>,
+  ) {
+    this.stripe = new Stripe(appConfiguration.stripeSecretKey, {
       apiVersion: '2026-01-28.clover',
     });
   }
@@ -118,7 +120,7 @@ export class StripeService {
   }
 
   constructWebhookEvent(payload: Buffer, signature: string): Stripe.Event {
-    const secret = this.config.getOrThrow<string>('app.stripeWebhookSecret');
+    const secret = this.appConfiguration.stripeWebhookSecret;
     return this.stripe.webhooks.constructEvent(payload, signature, secret);
   }
 

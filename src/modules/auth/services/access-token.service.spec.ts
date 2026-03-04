@@ -1,7 +1,9 @@
 import { JwtService } from '@nestjs/jwt';
-import { ConfigService } from '@nestjs/config';
+import type { ConfigType } from '@nestjs/config';
+import type { StringValue } from 'ms';
 import { UserRole } from '@prisma/client';
 import { createMock } from '@golevelup/ts-jest';
+import { jwtConfig } from '../../../common/config/namespaces/jwt.config';
 import { AccessTokenService } from './access-token.service';
 
 /**
@@ -11,16 +13,17 @@ import { AccessTokenService } from './access-token.service';
 describe('AccessTokenService', () => {
   let service: AccessTokenService;
   let jwtService: jest.Mocked<JwtService>;
-  let configService: jest.Mocked<ConfigService>;
+  let jwtConfiguration: ConfigType<typeof jwtConfig>;
 
   beforeEach(() => {
     jwtService = createMock<JwtService>();
-    configService = createMock<ConfigService>();
-
     jwtService.sign.mockReturnValue('signed.jwt.token');
-    configService.getOrThrow.mockReturnValue('15m');
+    jwtConfiguration = {
+      secret: 'test-secret',
+      expiration: '15m' as StringValue,
+    } as ConfigType<typeof jwtConfig>;
 
-    service = new AccessTokenService(jwtService, configService);
+    service = new AccessTokenService(jwtService, jwtConfiguration);
   });
 
   // ─── generateAccessToken ──────────────────────────────────────────────────
@@ -37,12 +40,6 @@ describe('AccessTokenService', () => {
         accessToken: 'signed.jwt.token',
         expiresIn: 900, // 15m → 900 s
       });
-    });
-
-    it('reads jwt.expiration from ConfigService', async () => {
-      await service.generateAccessToken(userId, email, role);
-
-      expect(configService.getOrThrow).toHaveBeenCalledWith('jwt.expiration');
     });
 
     it('calls JwtService.sign with the correct payload and expiry', async () => {
@@ -73,7 +70,7 @@ describe('AccessTokenService', () => {
     ])(
       'converts config value "%s" → expiresIn %i seconds',
       async (configValue, expectedSeconds) => {
-        configService.getOrThrow.mockReturnValue(configValue);
+        jwtConfiguration.expiration = configValue as StringValue;
 
         const result = await service.generateAccessToken(userId, email, role);
 
@@ -84,8 +81,8 @@ describe('AccessTokenService', () => {
       },
     );
 
-    it('throws when ConfigService returns an invalid duration string', async () => {
-      configService.getOrThrow.mockReturnValue('invalid');
+    it('throws when ConfigType logic gets an invalid duration string', async () => {
+      jwtConfiguration.expiration = 'invalid' as StringValue;
 
       await expect(
         service.generateAccessToken(userId, email, role),

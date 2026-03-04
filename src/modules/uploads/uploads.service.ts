@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Injectable, Inject } from '@nestjs/common';
+import type { ConfigType } from '@nestjs/config';
+import { s3Config } from '../../common/config/namespaces/s3.config';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { randomUUID } from 'crypto';
@@ -14,16 +15,18 @@ export class UploadsService {
   /** URL is valid for 15 minutes — enough time to complete a single PUT request */
   private readonly EXPIRATION_SECONDS = 900;
 
-  constructor(private readonly configService: ConfigService) {
-    this.region = this.configService.getOrThrow<string>('s3.region');
-    this.bucket = this.configService.getOrThrow<string>('s3.bucket');
+  constructor(
+    @Inject(s3Config.KEY)
+    private readonly s3Configuration: ConfigType<typeof s3Config>,
+  ) {
+    this.region = this.s3Configuration.region;
+    this.bucket = this.s3Configuration.bucket;
 
     this.s3Client = new S3Client({
       region: this.region,
       credentials: {
-        accessKeyId: this.configService.getOrThrow<string>('s3.accessKeyId'),
-        secretAccessKey:
-          this.configService.getOrThrow<string>('s3.secretAccessKey'),
+        accessKeyId: this.s3Configuration.accessKeyId,
+        secretAccessKey: this.s3Configuration.secretAccessKey,
       },
     });
   }
