@@ -31,6 +31,7 @@ import { ImagesDataLoader } from '../loaders/images.dataloader';
 import { FeaturedImageDataLoader } from '../loaders/featured-image.dataloader';
 import { OptionsDataLoader } from '../loaders/options.dataloader';
 import { VariantsDataLoader } from '../loaders/variants.dataloader';
+import { GetProductsArgs } from '../dto/get-products.args';
 
 @Resolver(() => Product)
 export class ProductsResolver {
@@ -47,12 +48,7 @@ export class ProductsResolver {
 
   @Public()
   @Query(() => PaginatedProducts, { name: 'products' })
-  findAll(
-    @Args('limit', { type: () => Int, defaultValue: 15 }) limit: number,
-    @Args('page', { type: () => Int, defaultValue: 1 }) page: number,
-    @Args('categoryId', { type: () => ID, nullable: true }, ParseUUIDPipe)
-    categoryId?: string,
-  ) {
+  findAll(@Args() { limit, page, categoryId }: GetProductsArgs) {
     return this.productsService.findAll(limit, page, categoryId);
   }
 

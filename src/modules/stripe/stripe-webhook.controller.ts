@@ -2,9 +2,9 @@ import { Controller, Post, Req, Res, Headers, Logger } from '@nestjs/common';
 import type { RawBodyRequest } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { StripeService } from './stripe.service';
-import { OrderWebhookService } from '../orders/services/order-webhook.service';
 import Stripe from 'stripe';
 import { Public } from '../auth/decorators/public.decorator';
+import { StripeHandlerFactory } from './webhook-factory.service';
 
 @Controller('webhooks/stripe')
 export class StripeWebhookController {
@@ -12,7 +12,7 @@ export class StripeWebhookController {
 
   constructor(
     private readonly stripeService: StripeService,
-    private readonly orderWebhookService: OrderWebhookService,
+    private readonly stripeHandlerFactory: StripeHandlerFactory,
   ) {}
 
   @Public()
@@ -41,30 +41,8 @@ export class StripeWebhookController {
     this.logger.log(`Received Stripe event: ${event.type} (${event.id})`);
 
     try {
-      switch (event.type) {
-        case 'payment_intent.succeeded':
-          await this.orderWebhookService.handlePaymentIntentSucceeded(
-            event.data.object as Stripe.PaymentIntent,
-          );
-          break;
+      await this.stripeHandlerFactory.runHandler(event);
 
-        case 'payment_intent.payment_failed':
-          await this.orderWebhookService.handlePaymentIntentFailed(
-            event.data.object as Stripe.PaymentIntent,
-          );
-          break;
-
-        case 'checkout.session.completed':
-          await this.orderWebhookService.handleCheckoutSessionCompleted(
-            event.data.object as Stripe.Checkout.Session,
-          );
-          break;
-
-        default:
-          this.logger.log(`Unhandled event type: ${event.type}`);
-      }
-
-      // If we respond with anything other than 200, Stripe will RETRY the webhook.
       res.status(200).json({ received: true });
     } catch (err) {
       this.logger.error(
